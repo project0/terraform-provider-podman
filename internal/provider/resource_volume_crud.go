@@ -78,8 +78,8 @@ func (r volumeResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest,
 func (r volumeResource) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
 	utils.AddUnexpectedError(
 		&resp.Diagnostics,
-		"Update triggered for a network resource",
-		"Networks are immutable resources and cannot be updated, it always needs to be replaced.",
+		"Update triggered for a volume resource",
+		"Volumes are immutable resources and cannot be updated, it always needs to be replaced.",
 	)
 }
 

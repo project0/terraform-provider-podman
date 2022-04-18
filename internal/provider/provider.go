@@ -100,7 +100,8 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 
 func (p *provider) GetResources(ctx context.Context) (map[string]tfsdk.ResourceType, diag.Diagnostics) {
 	return map[string]tfsdk.ResourceType{
-		"podman_volume": volumeResourceType{},
+		"podman_network": networkResourceType{},
+		"podman_volume":  volumeResourceType{},
 	}, nil
 }
 

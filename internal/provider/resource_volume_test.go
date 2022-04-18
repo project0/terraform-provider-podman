@@ -14,9 +14,9 @@ func TestAccResourceVolume_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccResourceVolumeConfig("one"),
+				Config: testAccResourceVolumeConfig(testName("one")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("podman_volume.test", "name", "one"),
+					resource.TestCheckResourceAttr("podman_volume.test", "name", testName("one")),
 				),
 			},
 			// ImportState testing
@@ -32,9 +32,9 @@ func TestAccResourceVolume_basic(t *testing.T) {
 			},
 			// Update and Read testing
 			{
-				Config: testAccResourceVolumeConfig("two"),
+				Config: testAccResourceVolumeConfig(testName("two")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("podman_volume.test", "name", "two"),
+					resource.TestCheckResourceAttr("podman_volume.test", "name", testName("two")),
 				),
 			},
 			// Delete testing automatically occurs in TestCase
