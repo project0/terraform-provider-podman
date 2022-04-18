@@ -34,7 +34,16 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - uses: actions/checkout@v3
-      - run: go mod download
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - if: steps.cache.outputs.cache-hit != 'true'
+        run: go mod download
       - run: go build -v .
 
   generate:
@@ -44,6 +53,16 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - if: steps.cache.outputs.cache-hit != 'true'
+        run: go mod download
       - run: go generate ./...
       - name: git diff
         run: |
@@ -76,7 +95,16 @@ jobs:
         run: |
           docker build -t podman -f .github/workflows/Dockerfile .github/workflows && \
           docker run -d -p 8888:8888 -d --cap-add=sys_admin --cap-add mknod --device=/dev/fuse --privileged --rm podman
-      - run: go mod download
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - if: steps.cache.outputs.cache-hit != 'true'
+        run: go mod download
       - env:
           TF_ACC_TEST_PROVIDER_PODMAN_URI: tcp://localhost:8888
           TF_ACC: "1"
