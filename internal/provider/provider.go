@@ -4,21 +4,22 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/containers/podman/v4/pkg/bindings"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/project0/terraform-provider-podman/internal/utils"
+)
+
+const (
+	podmanDefaultURI = "unix:///run/podman/podman.sock"
 )
 
 // provider satisfies the tfsdk.Provider interface and usually is included
 // with all Resource and DataSource implementations.
 type provider struct {
-	// client can contain the upstream provider SDK or HTTP client used to
-	// communicate with the upstream service. Resource and DataSource
-	// implementations can then make calls using this client.
-	//
-	// TODO: If appropriate, implement upstream provider SDK or HTTP client.
-	// client vendorsdk.ExampleClient
-
+	// client is the configured connection context for the
+	data providerData
 	// configured is set to true at the end of the Configure method.
 	// This can be used in Resource and DataSource implementations to verify
 	// that the provider was previously configured.
@@ -32,49 +33,70 @@ type provider struct {
 
 // providerData can be used to store data from the Terraform configuration.
 type providerData struct {
-	Example types.String `tfsdk:"example"`
-}
-
-func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderRequest, resp *tfsdk.ConfigureProviderResponse) {
-	var data providerData
-	diags := req.Config.Get(ctx, &data)
-	resp.Diagnostics.Append(diags...)
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Configuration values are now available.
-	// if data.Example.Null { /* ... */ }
-
-	// If the upstream provider SDK or HTTP client requires configuration, such
-	// as authentication or logging, this is a great opportunity to do so.
-
-	p.configured = true
-}
-
-func (p *provider) GetResources(ctx context.Context) (map[string]tfsdk.ResourceType, diag.Diagnostics) {
-	return map[string]tfsdk.ResourceType{
-		"scaffolding_example": exampleResourceType{},
-	}, nil
-}
-
-func (p *provider) GetDataSources(ctx context.Context) (map[string]tfsdk.DataSourceType, diag.Diagnostics) {
-	return map[string]tfsdk.DataSourceType{
-		"scaffolding_example": exampleDataSourceType{},
-	}, nil
+	URI      types.String `tfsdk:"uri"`
+	Identity types.String `tfsdk:"identity"`
 }
 
 func (p *provider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Attributes: map[string]tfsdk.Attribute{
-			"example": {
-				MarkdownDescription: "Example provider attribute",
-				Optional:            true,
-				Type:                types.StringType,
+			"uri": {
+				Description: "Connection URI to the podman service.",
+				MarkdownDescription: "Connection URI to the podman service. " +
+					"A valid URI connection should be of `scheme://`. " +
+					"For example `tcp://localhost:<port>`" +
+					"or `unix:///run/podman/podman.sock`" +
+					"or `ssh://<user>@<host>[:port]/run/podman/podman.sock?secure=True`." +
+					"Defaults to `" + podmanDefaultURI + "`.",
+				Optional: true,
+				Type:     types.StringType,
+			},
+			"identity": {
+				Description: "Local path to the identity file for SSH based connections.",
+				Optional:    true,
+				Type:        types.StringType,
 			},
 		},
 	}, nil
+}
+
+// Client initializes a new podman connection for futher usage
+func (p *provider) Client(ctx context.Context, diags *diag.Diagnostics) context.Context {
+	// set default to local socket
+	uri := podmanDefaultURI
+	if p.data.URI.Value != "" {
+		uri = p.data.URI.Value
+	}
+
+	c, err := bindings.NewConnectionWithIdentity(ctx, uri, p.data.Identity.Value)
+	if err != nil {
+		diags.AddError("Failed to initialize connection to podman server", err.Error())
+	}
+
+	return c
+}
+
+func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderRequest, resp *tfsdk.ConfigureProviderResponse) {
+	resp.Diagnostics.Append(req.Config.Get(ctx, &p.data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Probe client
+	p.Client(ctx, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	p.configured = true
+}
+
+func (p *provider) GetResources(ctx context.Context) (map[string]tfsdk.ResourceType, diag.Diagnostics) {
+	return map[string]tfsdk.ResourceType{}, nil
+}
+
+func (p *provider) GetDataSources(ctx context.Context) (map[string]tfsdk.DataSourceType, diag.Diagnostics) {
+	return map[string]tfsdk.DataSourceType{}, nil
 }
 
 func New(version string) func() tfsdk.Provider {
@@ -96,17 +118,20 @@ func convertProviderType(in tfsdk.Provider) (provider, diag.Diagnostics) {
 	p, ok := in.(*provider)
 
 	if !ok {
-		diags.AddError(
-			"Unexpected Provider Instance Type",
-			fmt.Sprintf("While creating the data source or resource, an unexpected provider type (%T) was received. This is always a bug in the provider code and should be reported to the provider developers.", p),
+		utils.AddUnexpectedError(
+			&diags,
+			"Provider Instance Type",
+			fmt.Sprintf("While creating the data source or resource, an unexpected provider type (%T) was received.", p),
 		)
+
 		return provider{}, diags
 	}
 
 	if p == nil {
-		diags.AddError(
-			"Unexpected Provider Instance Type",
-			"While creating the data source or resource, an unexpected empty provider instance was received. This is always a bug in the provider code and should be reported to the provider developers.",
+		utils.AddUnexpectedError(
+			&diags,
+			"Provider Instance Type",
+			"While creating the data source or resource, an unexpected empty provider instance was received.",
 		)
 		return provider{}, diags
 	}

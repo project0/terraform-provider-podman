@@ -20,6 +20,8 @@ env:
   # Go language version to use for building. This value should also be updated
   # in the release workflow if changed.
   GO_VERSION: '1.17'
+  # https://github.com/containers/podman/issues/12548
+  GOFLAGS: '-tags=remote,exclude_graphdriver_btrfs,btrfs_noversion,exclude_graphdriver_devicemapper,containers_image_openpgp'
 
 jobs:
   # Ensure project builds before running testing matrix
