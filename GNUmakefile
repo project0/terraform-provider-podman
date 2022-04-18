@@ -4,12 +4,17 @@ GOFLAGS ?= -tags=remote,exclude_graphdriver_btrfs,btrfs_noversion,exclude_graphd
 default: testacc
 
 # Run acceptance tests
-.PHONY: testacc
+.PHONY: testacc test
 testacc:
 	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
 
+test:
+	go test -v ./...
 
-.PHONY: generate lint
+.PHONY: build generate lint
+build:
+	go build
+
 generate:
 	go generate ./...
 
