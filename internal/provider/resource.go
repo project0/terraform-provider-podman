@@ -41,12 +41,12 @@ func withGenericAttributes(attributes map[string]tfsdk.Attribute) map[string]tfs
 	// Name is also used as unique id in podman,
 	// IDs itself only exists for docker compatibility and therefore does not make sense to implement
 	attributes["name"] = tfsdk.Attribute{
-		MarkdownDescription: "Name of the resource, also used as ID. If not given a name will be automatically assigned.",
-		Required:            false,
-		Optional:            true,
-		Computed:            true,
-		Validators:          []tfsdk.AttributeValidator{validator.MatchName()},
-		Type:                types.StringType,
+		Description: "Name of the resource, also used as ID. If not given a name will be automatically assigned.",
+		Required:    false,
+		Optional:    true,
+		Computed:    true,
+		Validators:  []tfsdk.AttributeValidator{validator.MatchName()},
+		Type:        types.StringType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
 			tfsdk.RequiresReplace(),
 		},
@@ -64,6 +64,13 @@ func withGenericAttributes(attributes map[string]tfsdk.Attribute) map[string]tfs
 			modifier.UseDefaultModifier(types.Map{ElemType: types.StringType, Null: false}),
 			tfsdk.RequiresReplace(),
 		},
+	}
+
+	// ID is only used for testing and will be always equal to name
+	attributes["id"] = tfsdk.Attribute{
+		Description: "Id aliases to name",
+		Type:        types.StringType,
+		Computed:    true,
 	}
 
 	return attributes

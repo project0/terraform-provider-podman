@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/containers/podman/v4/pkg/bindings"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -64,13 +65,19 @@ func (p *provider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostic
 func (p *provider) Client(ctx context.Context, diags *diag.Diagnostics) context.Context {
 	// set default to local socket
 	uri := podmanDefaultURI
+
+	// only used for tests
+	if testuri := os.Getenv("TF_ACC_TEST_PROVIDER_PODMAN_URI"); testuri != "" {
+		uri = testuri
+	}
+
 	if p.data.URI.Value != "" {
 		uri = p.data.URI.Value
 	}
 
 	c, err := bindings.NewConnectionWithIdentity(ctx, uri, p.data.Identity.Value)
 	if err != nil {
-		diags.AddError("Failed to initialize connection to podman server", err.Error())
+		diags.AddError("Failed to initialize connection to podman server", fmt.Sprintf("URI: %s, error: %s", uri, err.Error()))
 	}
 
 	return c

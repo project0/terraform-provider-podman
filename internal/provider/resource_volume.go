@@ -17,6 +17,7 @@ type (
 	}
 	volumeResourceType struct{}
 	volumeResourceData struct {
+		ID     types.String `tfsdk:"id"`
 		Name   types.String `tfsdk:"name"`
 		Labels types.Map    `tfsdk:"labels"`
 
@@ -71,6 +72,7 @@ func (t volumeResourceType) NewResource(ctx context.Context, in tfsdk.Provider) 
 
 func fromVolumeResponse(v *entities.VolumeConfigResponse, diags *diag.Diagnostics) *volumeResourceData {
 	return &volumeResourceData{
+		ID:      types.String{Value: v.Name},
 		Name:    types.String{Value: v.Name},
 		Driver:  types.String{Value: v.Driver},
 		Labels:  utils.MapStringToMapType(v.Labels),

@@ -22,4 +22,8 @@ Volume
 - `name` (String) Name of the resource, also used as ID. If not given a name will be automatically assigned.
 - `options` (Map of String) Driver specific options.
 
+### Read-Only
+
+- `id` (String) Id aliases to name
+
 
