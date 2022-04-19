@@ -13,12 +13,12 @@ builds:
   mod_timestamp: '{{ .CommitTimestamp }}'
   flags:
     - -trimpath
-  ldflags:
-    - '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}'
     - -tags
     - remote exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper containers_image_openpgp
+  ldflags:
+    - '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}'
   goos:
-    - freebsd
+#    - freebsd
     - windows
     - linux
     - darwin
