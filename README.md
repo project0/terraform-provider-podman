@@ -1,7 +1,7 @@
 # Terraform Provider for Podman
 
 [![Release](https://img.shields.io/github/v/release/project0/terraform-provider-podman)](https://github.com/project/terraform-provider-podman/releases)
-[![Registry](https://img.shields.io/badge/registry-doc%40latest-lightgrey?logo=terraform)](https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs)
+[![Registry](https://img.shields.io/badge/registry-doc%40latest-lightgrey?logo=terraform)](https://registry.terraform.io/providers/project0/podman/latest/docs)
 [![License](https://img.shields.io/badge/license-Mozilla-blue.svg)](https://github.com/project0/terraform-provider-podman/blob/main/LICENSE)
 [![Build](https://github.com/project0/terraform-provider-podman/workflows/Tests/badge.svg)](https://github.com/project0/terraform-provider-podman/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/project0/terraform-provider-podman)](https://goreportcard.com/report/github.com/project0/terraform-provider-podman)

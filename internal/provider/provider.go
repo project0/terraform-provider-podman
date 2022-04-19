@@ -62,7 +62,7 @@ func (p *provider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostic
 	}, nil
 }
 
-// Client initializes a new podman connection for futher usage
+// Client initializes a new podman connection for further usage
 func (p *provider) Client(ctx context.Context, diags *diag.Diagnostics) context.Context {
 	// set default to local socket
 	uri := podmanDefaultURI
