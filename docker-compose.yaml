@@ -1,0 +1,12 @@
+version: "3.9"  # optional since v1.27.0
+services:
+  podman:
+    build: .
+    ports:
+      - "10888:10888"
+    cap_add:
+      - sys_admin
+      - mknod
+    devices:
+      - /dev/fuse
+    privileged: true

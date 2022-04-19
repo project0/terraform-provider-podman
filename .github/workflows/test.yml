@@ -92,9 +92,7 @@ jobs:
           terraform_wrapper: false
       - uses: actions/checkout@v3
       - name: Build and execute podman daemon
-        run: |
-          docker build -t podman -f .github/workflows/Dockerfile .github/workflows && \
-          docker run -d -p 8888:8888 -d --cap-add=sys_admin --cap-add mknod --device=/dev/fuse --privileged --rm podman
+        run: docker-compose up -d
       - uses: actions/cache@v3
         with:
           path: |
@@ -106,7 +104,7 @@ jobs:
       - if: steps.cache.outputs.cache-hit != 'true'
         run: go mod download
       - env:
-          TF_ACC_TEST_PROVIDER_PODMAN_URI: tcp://localhost:8888
+          TF_ACC_TEST_PROVIDER_PODMAN_URI: tcp://localhost:10888
           TF_ACC: "1"
         run: go test -v -cover ./internal/provider/
         timeout-minutes: 10
