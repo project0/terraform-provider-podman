@@ -52,11 +52,34 @@ signs:
       - "${signature}"
       - "--detach-sign"
       - "${artifact}"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+    - '^chore'
+    - Merge pull request
+    - Merge remote-tracking branch
+    - Merge branch
+    - go mod tidy
+  groups:
+    - title: 'New Features'
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Bug fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 10
+    - title: Other work
+      order: 999
+
 release:
+  # If you want to manually examine the release before its live, uncomment this line:
+  # draft: true
   extra_files:
     - glob: 'terraform-registry-manifest.json'
       name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
-  # If you want to manually examine the release before its live, uncomment this line:
-  # draft: true
-changelog:
-  skip: true
+  footer: |
+    **Full Changelog**: https://github.com/project0/terraform-provider-podman/compare/{{ .PreviousTag }}...{{ .Tag }}
