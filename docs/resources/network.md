@@ -3,12 +3,12 @@
 page_title: "podman_network Resource - terraform-provider-podman"
 subcategory: ""
 description: |-
-  Network
+  Manage networks for containers and pods
 ---
 
 # podman_network (Resource)
 
-Network
+Manage networks for containers and pods
 
 ## Example Usage
 

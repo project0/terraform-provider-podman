@@ -46,7 +46,7 @@ type (
 func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Network",
+		Description: "Manage networks for containers and pods",
 		Attributes: withGenericAttributes(map[string]tfsdk.Attribute{
 			"dns": {
 				Computed:            true,

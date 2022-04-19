@@ -40,6 +40,7 @@ type providerData struct {
 
 func (p *provider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
+		MarkdownDescription: "The Podman provider provides resource management via the remote API.",
 		Attributes: map[string]tfsdk.Attribute{
 			"uri": {
 				Description: "Connection URI to the podman service.",

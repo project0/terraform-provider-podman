@@ -3,12 +3,12 @@
 page_title: "podman Provider"
 subcategory: ""
 description: |-
-  
+  The Podman provider provides resource management via the remote API.
 ---
 
 # podman Provider
 
-
+The Podman provider provides resource management via the remote API.
 
 ## Example Usage
 
