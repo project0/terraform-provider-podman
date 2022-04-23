@@ -92,11 +92,10 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				),
 				Type: types.StringType,
 				Validators: []tfsdk.AttributeValidator{
-					validator.OneOf([]string{
+					validator.OneOf(
 						ntypes.BridgeNetworkDriver,
 						ntypes.MacVLANNetworkDriver,
 						ntypes.IPVLANNetworkDriver,
-					},
 					)},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					tfsdk.UseStateForUnknown(),
@@ -115,11 +114,10 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				),
 				Type: types.StringType,
 				Validators: []tfsdk.AttributeValidator{
-					validator.OneOf([]string{
+					validator.OneOf(
 						ntypes.HostLocalIPAMDriver,
 						ntypes.DHCPIPAMDriver,
 						"none",
-					},
 					)},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					tfsdk.UseStateForUnknown(),

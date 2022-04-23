@@ -19,7 +19,7 @@ func (r podResource) Create(ctx context.Context, req tfsdk.CreateResourceRequest
 		return
 	}
 
-	podSpec := toPodmanPodSpecGenerator(ctx, data, &resp.Diagnostics)
+	podSpec := data.toPodmanPodSpecGenerator(ctx, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

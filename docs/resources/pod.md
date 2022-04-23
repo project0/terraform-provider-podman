@@ -20,10 +20,50 @@ Manage pods for containers
 - `cgroup_parent` (String) Path to cgroups under which the cgroup for the pod will be created. If the path is not absolute, the path is considered to be relative to the cgroups path of the init process. Cgroups will be created if they do not already exist.
 - `hostname` (String) Hostname is the pod's hostname. If not set, the name of the pod will be used (if a name was not provided here, the name auto-generated for the pod will be used). This will be used by the infra container and all containers in the pod as long as the UTS namespace is shared.
 - `labels` (Map of String) Labels is a set of user defined key-value labels of the resource
+- `mounts` (Attributes Set) Mounts volume, bind, image, tmpfs, etc.. (see [below for nested schema](#nestedatt--mounts))
 - `name` (String) Name of the resource, also used as ID. If not given a name will be automatically assigned.
 
 ### Read-Only
 
 - `id` (String) Id aliases to name
+
+<a id="nestedatt--mounts"></a>
+### Nested Schema for `mounts`
+
+Optional:
+
+- `bind` (Attributes) Named Volume (see [below for nested schema](#nestedatt--mounts--bind))
+- `destination` (String) Target path
+- `volume` (Attributes) Named Volume (see [below for nested schema](#nestedatt--mounts--volume))
+
+<a id="nestedatt--mounts--bind"></a>
+### Nested Schema for `mounts.bind`
+
+Optional:
+
+- `chown` (Boolean) TODO
+- `dev` (Boolean) TODO
+- `exec` (Boolean) Mounting the volume with the exec(true) or noexec(false) option means that no executables on the volume will be able to executed within the pod.Defaults depends on the mount type or storage driver.
+- `idmap` (Boolean) TODO
+- `path` (String) Host path
+- `propagation` (String) TODO
+- `read_only` (Boolean) TODO
+- `recursive` (Boolean) TODO
+- `relabel` (Boolean) Labels the volume mounts. Sets the z (true) flag label the content with a shared content label, or Z (false) flag to label the content with a private unshared label. Default is unset (null).
+- `suid` (Boolean) TODO
+
+
+<a id="nestedatt--mounts--volume"></a>
+### Nested Schema for `mounts.volume`
+
+Optional:
+
+- `chown` (Boolean) TODO
+- `dev` (Boolean) TODO
+- `exec` (Boolean) Mounting the volume with the exec(true) or noexec(false) option means that no executables on the volume will be able to executed within the pod.Defaults depends on the mount type or storage driver.
+- `idmap` (Boolean) TODO
+- `name` (String) Name of the volume
+- `read_only` (Boolean) TODO
+- `suid` (Boolean) TODO
 
 

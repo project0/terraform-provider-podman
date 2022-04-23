@@ -28,7 +28,7 @@ func MatchRegex(regex *regexp.Regexp) tfsdk.AttributeValidator {
 	}
 }
 
-func OneOf(values []string) tfsdk.AttributeValidator {
+func OneOf(values ...string) tfsdk.AttributeValidator {
 	return &genericStringValidator{
 		description: "string must be one of " + strings.Join(values, ","),
 		validate: func(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse, str string) {
