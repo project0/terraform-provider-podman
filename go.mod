@@ -8,8 +8,8 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.7.0
 	github.com/hashicorp/terraform-plugin-framework v0.7.0
 	github.com/hashicorp/terraform-plugin-go v0.9.0
-	github.com/hashicorp/terraform-plugin-log v0.3.0
-	github.com/hashicorp/terraform-plugin-sdk/v2 v2.14.0
+	github.com/hashicorp/terraform-plugin-log v0.4.0
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.15.0
 )
 
 require (
@@ -69,7 +69,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/go-version v1.4.0 // indirect
 	github.com/hashicorp/hc-install v0.3.1 // indirect
-	github.com/hashicorp/hcl/v2 v2.11.1 // indirect
+	github.com/hashicorp/hcl/v2 v2.12.0 // indirect
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/terraform-exec v0.16.1 // indirect
 	github.com/hashicorp/terraform-json v0.13.0 // indirect
@@ -95,7 +95,7 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
-	github.com/mitchellh/mapstructure v1.4.3 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/sys/mountinfo v0.6.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
