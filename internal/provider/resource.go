@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 
+	apiclient "github.com/project0/terraform-provider-podman/api/client"
+
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -22,7 +24,7 @@ func (g genericResource) initClientData(
 	data interface{},
 	get func(context.Context, interface{}) diag.Diagnostics,
 	diags *diag.Diagnostics,
-) context.Context {
+) *apiclient.Podman {
 
 	diags.Append(
 		get(ctx, data)...,
@@ -33,7 +35,7 @@ func (g genericResource) initClientData(
 		return nil
 	}
 
-	return g.provider.Client(ctx, diags)
+	return g.provider.client
 }
 
 // re-usable type definitions

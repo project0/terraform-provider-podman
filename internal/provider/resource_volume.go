@@ -3,10 +3,10 @@ package provider
 import (
 	"context"
 
-	"github.com/containers/podman/v4/pkg/domain/entities"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/project0/terraform-provider-podman/api/client/volumes"
 	"github.com/project0/terraform-provider-podman/internal/modifier"
 	"github.com/project0/terraform-provider-podman/internal/utils"
 )
@@ -70,7 +70,7 @@ func (t volumeResourceType) NewResource(ctx context.Context, in tfsdk.Provider) 
 	}, diags
 }
 
-func fromVolumeResponse(v *entities.VolumeConfigResponse, diags *diag.Diagnostics) *volumeResourceData {
+func fromVolumeResponse(v *volumes.VolumeCreateLibpodCreatedBody, diags *diag.Diagnostics) *volumeResourceData {
 	return &volumeResourceData{
 		ID:      types.String{Value: v.Name},
 		Name:    types.String{Value: v.Name},

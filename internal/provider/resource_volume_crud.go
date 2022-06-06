@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/containers/podman/v4/pkg/bindings/volumes"
-	"github.com/containers/podman/v4/pkg/domain/entities"
+	"github.com/project0/terraform-provider-podman/api/client/volumes"
+	"github.com/project0/terraform-provider-podman/api/models"
+
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/project0/terraform-provider-podman/internal/utils"
@@ -20,7 +21,7 @@ func (r volumeResource) Create(ctx context.Context, req tfsdk.CreateResourceRequ
 	}
 
 	// Build volume
-	var volCreate = &entities.VolumeCreateOptions{
+	var volCreate = &models.VolumeCreateOptions{
 		// null values are automatically empty string
 		// as we do not use pointer we do not need to distinguish and pass it directly
 		Name:   data.Name.Value,
@@ -42,7 +43,10 @@ func (r volumeResource) Create(ctx context.Context, req tfsdk.CreateResourceRequ
 	}
 
 	// Create
-	volResponse, err := volumes.Create(client, *volCreate, nil)
+	volResponse, err := client.Volumes.VolumeCreateLibpod(
+		volumes.NewVolumeCreateLibpodParamsWithContext(ctx).
+			WithCreate(volCreate),
+	)
 	if err != nil {
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to create volume resource: %s", err.Error()))
 		return
@@ -50,7 +54,7 @@ func (r volumeResource) Create(ctx context.Context, req tfsdk.CreateResourceRequ
 
 	// Set state
 	resp.Diagnostics.Append(
-		resp.State.Set(ctx, fromVolumeResponse(volResponse, &resp.Diagnostics))...,
+		resp.State.Set(ctx, fromVolumeResponse(volResponse.GetPayload(), &resp.Diagnostics))...,
 	)
 }
 
@@ -62,7 +66,10 @@ func (r volumeResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest,
 		return
 	}
 
-	volResponse, err := volumes.Inspect(client, data.Name.Value, nil)
+	volResponse, err := client.Volumes.VolumeInspectLibpod(
+		volumes.NewVolumeInspectLibpodParamsWithContext(ctx).
+			WithName(data.Name.Value),
+	)
 	if err != nil {
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to read volume resource: %s", err.Error()))
 		return
@@ -70,7 +77,7 @@ func (r volumeResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest,
 
 	// Set state
 	resp.Diagnostics.Append(
-		resp.State.Set(ctx, fromVolumeResponse(volResponse, &resp.Diagnostics))...,
+		resp.State.Set(ctx, fromVolumeResponse(volResponse.GetPayload(), &resp.Diagnostics))...,
 	)
 }
 

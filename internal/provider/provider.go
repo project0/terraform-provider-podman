@@ -5,10 +5,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/containers/podman/v4/pkg/bindings"
+	httptransport "github.com/go-openapi/runtime/client"
+	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	apiclient "github.com/project0/terraform-provider-podman/api/client"
+	"github.com/project0/terraform-provider-podman/api/client/system_compat"
 	"github.com/project0/terraform-provider-podman/internal/utils"
 )
 
@@ -19,8 +23,11 @@ const (
 // provider satisfies the tfsdk.Provider interface and usually is included
 // with all Resource and DataSource implementations.
 type provider struct {
-	// client is the configured connection context for the
 	data providerData
+
+	// client is the configured connection context for the
+	client *apiclient.Podman
+
 	// configured is set to true at the end of the Configure method.
 	// This can be used in Resource and DataSource implementations to verify
 	// that the provider was previously configured.
@@ -63,7 +70,7 @@ func (p *provider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostic
 }
 
 // Client initializes a new podman connection for further usage
-func (p *provider) Client(ctx context.Context, diags *diag.Diagnostics) context.Context {
+func (p *provider) Client(ctx context.Context, diags *diag.Diagnostics) *apiclient.Podman {
 	// set default to local socket
 	uri := podmanDefaultURI
 
@@ -76,12 +83,24 @@ func (p *provider) Client(ctx context.Context, diags *diag.Diagnostics) context.
 		uri = p.data.URI.Value
 	}
 
-	c, err := bindings.NewConnectionWithIdentity(ctx, uri, p.data.Identity.Value)
+	transport := httptransport.New(uri, "", nil)
+	cl := apiclient.New(transport, strfmt.Default)
+
+	// Probe client
+	resp, err := cl.SystemCompat.SystemPing(system_compat.NewSystemPingParams(), nil)
 	if err != nil {
 		diags.AddError("Failed to initialize connection to podman server", fmt.Sprintf("URI: %s, error: %s", uri, err.Error()))
+		return nil
 	}
+	tflog.Info(ctx, "Podman service successfully pinged",
+		map[string]interface{}{
+			"api_version":         resp.APIVersion,
+			"lib_pod_api_version": resp.LibpodAPIVersion,
+		},
+	)
 
-	return c
+	return cl
+
 }
 
 func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderRequest, resp *tfsdk.ConfigureProviderResponse) {
@@ -90,8 +109,7 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		return
 	}
 
-	// Probe client
-	p.Client(ctx, &resp.Diagnostics)
+	p.client = p.Client(ctx, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

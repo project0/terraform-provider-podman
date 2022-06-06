@@ -25,7 +25,12 @@ build:
 	go build
 
 generate:
-	go generate ./...
+	go generate main.go
 
+generate-api:
+	( \
+		cd api; \
+		go generate \
+	)
 lint:
 	golangci-lint run -v
