@@ -1,7 +1,8 @@
 version: "3.9"  # optional since v1.27.0
 services:
   podman:
-    build: .
+    pull_policy: always
+    image: ghcr.io/project0/podman-container:${PODMAN_VERSION:-latest}
     ports:
       - "10888:10888"
     cap_add:

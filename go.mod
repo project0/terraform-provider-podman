@@ -1,6 +1,6 @@
 module github.com/project0/terraform-provider-podman
 
-go 1.17
+go 1.19
 
 require (
 	github.com/containers/common v0.47.5
