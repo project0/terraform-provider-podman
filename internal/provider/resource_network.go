@@ -8,6 +8,7 @@ import (
 	ntypes "github.com/containers/common/libnetwork/types"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/project0/terraform-provider-podman/internal/modifier"
@@ -19,7 +20,6 @@ type (
 	networkResource struct {
 		genericResource
 	}
-	networkResourceType struct{}
 
 	networkResourceData struct {
 		ID     types.String `tfsdk:"id"`
@@ -43,7 +43,16 @@ type (
 	}
 )
 
-func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func NewNetworkResource() resource.Resource {
+	return &networkResource{}
+}
+
+// Metadata returns the data source type name.
+func (r networkResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_network"
+}
+
+func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		// This description is used by the documentation generator and the language server.
 		Description: "Manage networks for containers and pods",
@@ -54,8 +63,8 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				MarkdownDescription: "Enable the DNS plugin for this network which if enabled, can perform container to container name resolution. Defaults to `false`.",
 				Type:                types.BoolType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.UseStateForUnknown(),
-					tfsdk.RequiresReplace(),
+					resource.UseStateForUnknown(),
+					resource.RequiresReplace(),
 				},
 			},
 
@@ -65,8 +74,8 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				MarkdownDescription: "Enable IPv6 (Dual Stack) networking. If no subnets are given it will allocate a ipv4 and ipv6 subnet. Defaults to `false`.",
 				Type:                types.BoolType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.UseStateForUnknown(),
-					tfsdk.RequiresReplace(),
+					resource.UseStateForUnknown(),
+					resource.RequiresReplace(),
 				},
 			},
 
@@ -76,8 +85,8 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				MarkdownDescription: "Internal is whether the Network should not have external routes to public or other Networks. Defaults to `false`.",
 				Type:                types.BoolType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.UseStateForUnknown(),
-					tfsdk.RequiresReplace(),
+					resource.UseStateForUnknown(),
+					resource.RequiresReplace(),
 				},
 			},
 
@@ -99,8 +108,8 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 					},
 					)},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.UseStateForUnknown(),
-					tfsdk.RequiresReplace(),
+					resource.UseStateForUnknown(),
+					resource.RequiresReplace(),
 				},
 			},
 
@@ -122,8 +131,8 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 					},
 					)},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.UseStateForUnknown(),
-					tfsdk.RequiresReplace(),
+					resource.UseStateForUnknown(),
+					resource.RequiresReplace(),
 				},
 			},
 
@@ -137,7 +146,7 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					modifier.UseDefaultModifier(types.Map{ElemType: types.StringType, Null: false}),
-					tfsdk.RequiresReplace(),
+					resource.RequiresReplace(),
 				},
 			},
 
@@ -155,7 +164,7 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 							Type:                types.StringType,
 							Validators:          []tfsdk.AttributeValidator{validator.IsCIDR()},
 							PlanModifiers: tfsdk.AttributePlanModifiers{
-								tfsdk.RequiresReplace(),
+								resource.RequiresReplace(),
 							},
 						},
 						"gateway": {
@@ -165,26 +174,20 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 							Type:                types.StringType,
 							Validators:          []tfsdk.AttributeValidator{validator.IsIpAdress()},
 							PlanModifiers: tfsdk.AttributePlanModifiers{
-								tfsdk.UseStateForUnknown(),
-								tfsdk.RequiresReplace(),
+								resource.UseStateForUnknown(),
+								resource.RequiresReplace(),
 							},
 						},
 					},
-					tfsdk.SetNestedAttributesOptions{},
 				),
 			},
 		}),
 	}, nil
 }
 
-func (t networkResourceType) NewResource(ctx context.Context, in tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
-	provider, diags := convertProviderType(in)
-
-	return networkResource{
-		genericResource: genericResource{
-			provider: provider,
-		},
-	}, diags
+// Configure adds the provider configured client to the data source.
+func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	r.genericResource.Configure(ctx, req, resp)
 }
 
 // toPodmanNetwork converts a resource data to a podman network

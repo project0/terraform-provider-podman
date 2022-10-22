@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 )
 
 const (
@@ -21,7 +21,7 @@ func AddUnexpectedError(d *diag.Diagnostics, summary, detail string) {
 }
 
 // AddUnexpectedAttributeError adds a diagnostic error with injected bug hint
-func AddUnexpectedAttributeError(path *tftypes.AttributePath, d *diag.Diagnostics, summary, detail string) {
+func AddUnexpectedAttributeError(path path.Path, d *diag.Diagnostics, summary, detail string) {
 	d.AddAttributeError(
 		path,
 		fmt.Sprintf(diagMsgErrorSummary, summary),

@@ -7,6 +7,7 @@ import (
 	"github.com/containers/podman/v4/pkg/domain/entities"
 	"github.com/containers/podman/v4/pkg/specgen"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/project0/terraform-provider-podman/internal/utils"
@@ -16,7 +17,6 @@ type (
 	podResource struct {
 		genericResource
 	}
-	podResourceType struct{}
 	podResourceData struct {
 		ID     types.String `tfsdk:"id"`
 		Name   types.String `tfsdk:"name"`
@@ -27,7 +27,16 @@ type (
 	}
 )
 
-func (t podResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func NewPodResource() resource.Resource {
+	return &podResource{}
+}
+
+// Metadata returns the data source type name.
+func (r podResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_pod"
+}
+
+func (r podResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		// This description is used by the documentation generator and the language server.
 		Description: "Manage pods for containers",
@@ -41,8 +50,8 @@ func (t podResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 				Computed: true,
 				Type:     types.StringType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.UseStateForUnknown(),
-					tfsdk.RequiresReplace(),
+					resource.UseStateForUnknown(),
+					resource.RequiresReplace(),
 				},
 			},
 
@@ -55,8 +64,8 @@ func (t podResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 				Computed: false,
 				Type:     types.StringType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.UseStateForUnknown(),
-					tfsdk.RequiresReplace(),
+					resource.UseStateForUnknown(),
+					resource.RequiresReplace(),
 				},
 			},
 
@@ -69,8 +78,8 @@ func (t podResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 							Computed: true,
 							Type:     types.BoolType,
 							PlanModifiers: tfsdk.AttributePlanModifiers{
-								tfsdk.UseStateForUnknown(),
-								tfsdk.RequiresReplace(),
+								resource.UseStateForUnknown(),
+								resource.RequiresReplace(),
 							},
 						},
 
@@ -83,14 +92,9 @@ func (t podResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 	}, nil
 }
 
-func (t podResourceType) NewResource(ctx context.Context, in tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
-	provider, diags := convertProviderType(in)
-
-	return podResource{
-		genericResource: genericResource{
-			provider: provider,
-		},
-	}, diags
+// Configure adds the provider configured client to the data source.
+func (r *podResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	r.genericResource.Configure(ctx, req, resp)
 }
 
 func toPodmanPodSpecGenerator(ctx context.Context, d podResourceData, diags *diag.Diagnostics) *specgen.PodSpecGenerator {

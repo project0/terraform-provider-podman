@@ -6,10 +6,14 @@ import (
 	"os"
 
 	"github.com/containers/podman/v4/pkg/bindings"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/project0/terraform-provider-podman/internal/utils"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 const (
@@ -18,18 +22,8 @@ const (
 
 // provider satisfies the tfsdk.Provider interface and usually is included
 // with all Resource and DataSource implementations.
-type provider struct {
+type podmanProvider struct {
 	// client is the configured connection context for the
-	data providerData
-	// configured is set to true at the end of the Configure method.
-	// This can be used in Resource and DataSource implementations to verify
-	// that the provider was previously configured.
-	configured bool
-
-	// version is set to the provider version on release, "dev" when the
-	// provider is built and ran locally, and "test" when running acceptance
-	// testing.
-	version string
 }
 
 // providerData can be used to store data from the Terraform configuration.
@@ -38,7 +32,17 @@ type providerData struct {
 	Identity types.String `tfsdk:"identity"`
 }
 
-func (p *provider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func New() provider.Provider {
+	return &podmanProvider{}
+}
+
+// Metadata returns the provider type name.
+func (p *podmanProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "podman"
+}
+
+// GetSchema defines the provider-level schema for configuration data.
+func (p *podmanProvider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		MarkdownDescription: "The Podman provider provides resource management via the remote API.",
 		Attributes: map[string]tfsdk.Attribute{
@@ -62,8 +66,45 @@ func (p *provider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostic
 	}, nil
 }
 
-// Client initializes a new podman connection for further usage
-func (p *provider) Client(ctx context.Context, diags *diag.Diagnostics) context.Context {
+// Configure prepares a HashiCups API client for data sources and resources.
+func (p *podmanProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	tflog.Debug(ctx, "Configure Podman client")
+
+	var data providerData
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	newPodmanClient(ctx, &resp.Diagnostics, data)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// make podman clent data available
+	resp.DataSourceData = data
+	resp.ResourceData = data
+
+	tflog.Info(ctx, "Configured Podman client", map[string]any{"success": true})
+}
+
+// DataSources defines the data sources implemented in the provider.
+func (p *podmanProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+	return []func() datasource.DataSource{}
+}
+
+// Resources defines the resources implemented in the provider.
+func (p *podmanProvider) Resources(ctx context.Context) []func() resource.Resource {
+	return []func() resource.Resource{
+		NewNetworkResource,
+		NewPodResource,
+		NewVolumeResource,
+	}
+}
+
+// newPodmanClient initializes a new podman connection for further usage
+// The final client is the configured connection context
+func newPodmanClient(ctx context.Context, diags *diag.Diagnostics, data providerData) context.Context {
 	// set default to local socket
 	uri := podmanDefaultURI
 
@@ -72,81 +113,14 @@ func (p *provider) Client(ctx context.Context, diags *diag.Diagnostics) context.
 		uri = testuri
 	}
 
-	if p.data.URI.Value != "" {
-		uri = p.data.URI.Value
+	if data.URI.Value != "" {
+		uri = data.URI.Value
 	}
 
-	c, err := bindings.NewConnectionWithIdentity(ctx, uri, p.data.Identity.Value)
+	c, err := bindings.NewConnectionWithIdentity(ctx, uri, data.Identity.Value, false)
 	if err != nil {
 		diags.AddError("Failed to initialize connection to podman server", fmt.Sprintf("URI: %s, error: %s", uri, err.Error()))
 	}
 
 	return c
-}
-
-func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderRequest, resp *tfsdk.ConfigureProviderResponse) {
-	resp.Diagnostics.Append(req.Config.Get(ctx, &p.data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Probe client
-	p.Client(ctx, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	p.configured = true
-}
-
-func (p *provider) GetResources(ctx context.Context) (map[string]tfsdk.ResourceType, diag.Diagnostics) {
-	return map[string]tfsdk.ResourceType{
-		"podman_network": networkResourceType{},
-		"podman_pod":     podResourceType{},
-		"podman_volume":  volumeResourceType{},
-	}, nil
-}
-
-func (p *provider) GetDataSources(ctx context.Context) (map[string]tfsdk.DataSourceType, diag.Diagnostics) {
-	return map[string]tfsdk.DataSourceType{}, nil
-}
-
-func New(version string) func() tfsdk.Provider {
-	return func() tfsdk.Provider {
-		return &provider{
-			version: version,
-		}
-	}
-}
-
-// convertProviderType is a helper function for NewResource and NewDataSource
-// implementations to associate the concrete provider type. Alternatively,
-// this helper can be skipped and the provider type can be directly type
-// asserted (e.g. provider: in.(*provider)), however using this can prevent
-// potential panics.
-func convertProviderType(in tfsdk.Provider) (provider, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	p, ok := in.(*provider)
-
-	if !ok {
-		utils.AddUnexpectedError(
-			&diags,
-			"Provider Instance Type",
-			fmt.Sprintf("While creating the data source or resource, an unexpected provider type (%T) was received.", p),
-		)
-
-		return provider{}, diags
-	}
-
-	if p == nil {
-		utils.AddUnexpectedError(
-			&diags,
-			"Provider Instance Type",
-			"While creating the data source or resource, an unexpected empty provider instance was received.",
-		)
-		return provider{}, diags
-	}
-
-	return *p, diags
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/containers/podman/v4/pkg/domain/entities"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/project0/terraform-provider-podman/internal/modifier"
@@ -15,7 +16,6 @@ type (
 	volumeResource struct {
 		genericResource
 	}
-	volumeResourceType struct{}
 	volumeResourceData struct {
 		ID     types.String `tfsdk:"id"`
 		Name   types.String `tfsdk:"name"`
@@ -26,7 +26,16 @@ type (
 	}
 )
 
-func (t volumeResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func NewVolumeResource() resource.Resource {
+	return &volumeResource{}
+}
+
+// Metadata returns the data source type name.
+func (r volumeResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_volume"
+}
+
+func (t volumeResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		// This description is used by the documentation generator and the language server.
 		Description: "Manage volumes for containers and pods",
@@ -38,7 +47,7 @@ func (t volumeResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.D
 				Computed:            true,
 				Type:                types.StringType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.RequiresReplace(),
+					resource.RequiresReplace(),
 				},
 			},
 			"options": {
@@ -51,7 +60,7 @@ func (t volumeResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.D
 				},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					modifier.UseDefaultModifier(types.Map{ElemType: types.StringType, Null: false}),
-					tfsdk.RequiresReplace(),
+					resource.RequiresReplace(),
 				},
 			},
 		}),
@@ -60,14 +69,9 @@ func (t volumeResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.D
 	}, nil
 }
 
-func (t volumeResourceType) NewResource(ctx context.Context, in tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
-	provider, diags := convertProviderType(in)
-
-	return volumeResource{
-		genericResource: genericResource{
-			provider: provider,
-		},
-	}, diags
+// Configure adds the provider configured client to the data source.
+func (r *volumeResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	r.genericResource.Configure(ctx, req, resp)
 }
 
 func fromVolumeResponse(v *entities.VolumeConfigResponse, diags *diag.Diagnostics) *volumeResourceData {
