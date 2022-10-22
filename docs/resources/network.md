@@ -63,9 +63,12 @@ resource "podman_network" "dualstack" {
 <a id="nestedatt--subnets"></a>
 ### Nested Schema for `subnets`
 
+Required:
+
+- `subnet` (String) The subnet in CIDR notation.
+
 Optional:
 
 - `gateway` (String) Gateway IP for this Network.
-- `subnet` (String) The subnet in CIDR notation.
 
 

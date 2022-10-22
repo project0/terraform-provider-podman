@@ -2,20 +2,43 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/project0/terraform-provider-podman/internal/modifier"
+	"github.com/project0/terraform-provider-podman/internal/utils"
 	"github.com/project0/terraform-provider-podman/internal/validator"
 )
 
 type (
 	genericResource struct {
-		provider provider
+		providerData providerData
 	}
 )
+
+// Configures the podman client
+func (g *genericResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+
+	// It looks like this method is called twice, the first time its nil and happen before the provider is initialized.
+	if req.ProviderData == nil {
+		return
+	}
+
+	var ok bool
+	g.providerData, ok = req.ProviderData.(providerData)
+
+	if !ok {
+		utils.AddUnexpectedError(
+			&resp.Diagnostics,
+			"Provider Instance Type",
+			fmt.Sprintf("While creating the data source or resource, an unexpected provider type (%T) was received.", req.ProviderData),
+		)
+	}
+}
 
 func (g genericResource) initClientData(
 	ctx context.Context,
@@ -33,7 +56,7 @@ func (g genericResource) initClientData(
 		return nil
 	}
 
-	return g.provider.Client(ctx, diags)
+	return newPodmanClient(ctx, diags, g.providerData)
 }
 
 // re-usable type definitions
@@ -48,7 +71,7 @@ func withGenericAttributes(attributes map[string]tfsdk.Attribute) map[string]tfs
 		Validators:  []tfsdk.AttributeValidator{validator.MatchName()},
 		Type:        types.StringType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
-			tfsdk.RequiresReplace(),
+			resource.RequiresReplace(),
 		},
 	}
 
@@ -62,7 +85,7 @@ func withGenericAttributes(attributes map[string]tfsdk.Attribute) map[string]tfs
 		},
 		PlanModifiers: tfsdk.AttributePlanModifiers{
 			modifier.UseDefaultModifier(types.Map{ElemType: types.StringType, Null: false}),
-			tfsdk.RequiresReplace(),
+			resource.RequiresReplace(),
 		},
 	}
 

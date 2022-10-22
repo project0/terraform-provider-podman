@@ -6,12 +6,12 @@ import (
 
 	"github.com/containers/podman/v4/pkg/bindings/volumes"
 	"github.com/containers/podman/v4/pkg/domain/entities"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/project0/terraform-provider-podman/internal/utils"
 )
 
-func (r volumeResource) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r volumeResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data volumeResourceData
 
 	client := r.initClientData(ctx, &data, req.Config.Get, &resp.Diagnostics)
@@ -54,7 +54,7 @@ func (r volumeResource) Create(ctx context.Context, req tfsdk.CreateResourceRequ
 	)
 }
 
-func (r volumeResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r volumeResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data volumeResourceData
 
 	client := r.initClientData(ctx, &data, req.State.Get, &resp.Diagnostics)
@@ -75,7 +75,7 @@ func (r volumeResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest,
 }
 
 // Update is not implemented
-func (r volumeResource) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r volumeResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	utils.AddUnexpectedError(
 		&resp.Diagnostics,
 		"Update triggered for a volume resource",
@@ -83,7 +83,7 @@ func (r volumeResource) Update(ctx context.Context, req tfsdk.UpdateResourceRequ
 	)
 }
 
-func (r volumeResource) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r volumeResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data volumeResourceData
 
 	client := r.initClientData(ctx, &data, req.State.Get, &resp.Diagnostics)
@@ -100,6 +100,7 @@ func (r volumeResource) Delete(ctx context.Context, req tfsdk.DeleteResourceRequ
 	resp.State.RemoveResource(ctx)
 }
 
-func (r volumeResource) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("name"), req, resp)
+func (r volumeResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
+
 }
