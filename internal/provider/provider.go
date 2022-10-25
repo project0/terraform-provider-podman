@@ -28,8 +28,9 @@ type podmanProvider struct {
 
 // providerData can be used to store data from the Terraform configuration.
 type providerData struct {
-	URI      types.String `tfsdk:"uri"`
-	Identity types.String `tfsdk:"identity"`
+	URI           types.String `tfsdk:"uri"`
+	Identity      types.String `tfsdk:"identity"`
+	DefaultLabels types.Map    `tfsdk:"default_labels"`
 }
 
 func New() provider.Provider {
@@ -61,6 +62,13 @@ func (p *podmanProvider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 				Description: "Local path to the identity file for SSH based connections.",
 				Optional:    true,
 				Type:        types.StringType,
+			},
+			"default_labels": {
+				Description: "Default labels for all resources. Please note that changing labels will trigger replacement for most of the resources.",
+				Optional:    true,
+				Type: types.MapType{
+					ElemType: types.StringType,
+				},
 			},
 		},
 	}, nil

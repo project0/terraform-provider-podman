@@ -116,7 +116,7 @@ func toPodmanPodSpecGenerator(ctx context.Context, d podResourceData, diags *dia
 
 func fromPodResponse(p *entities.PodInspectReport, diags *diag.Diagnostics) *podResourceData {
 	d := &podResourceData{
-		ID:     types.String{Value: p.Name},
+		ID:     types.String{Value: p.ID},
 		Name:   types.String{Value: p.Name},
 		Labels: utils.MapStringToMapType(p.Labels),
 

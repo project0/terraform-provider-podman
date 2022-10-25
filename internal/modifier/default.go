@@ -28,7 +28,6 @@ func (r DefaultModifier) Modify(ctx context.Context, req tfsdk.ModifyAttributePl
 		utils.AddUnexpectedAttributeError(req.AttributePath, &resp.Diagnostics, "Failed to retrieve value", err.Error())
 		return
 	}
-
 	if val.IsNull() {
 		resp.AttributePlan = r.value
 	}

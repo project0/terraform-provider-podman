@@ -43,16 +43,35 @@ type (
 	}
 )
 
+// Ensure the implementation satisfies the expected interfaces.
+var (
+	_ resource.Resource                = &networkResource{}
+	_ resource.ResourceWithConfigure   = &networkResource{}
+	_ resource.ResourceWithModifyPlan  = &networkResource{}
+	_ resource.ResourceWithImportState = &networkResource{}
+)
+
+// NewNetworkResource creates a new network resource
 func NewNetworkResource() resource.Resource {
 	return &networkResource{}
 }
 
+// Configure adds the provider configured client to the data source.
+func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	r.genericResource.Configure(ctx, req, resp)
+}
+
+// Configure adds the provider configured client to the data source.
+func (r *networkResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	r.genericResource.ModifyPlan(ctx, req, resp)
+}
+
 // Metadata returns the data source type name.
-func (r networkResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *networkResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_network"
 }
 
-func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (r *networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		// This description is used by the documentation generator and the language server.
 		Description: "Manage networks for containers and pods",
@@ -64,7 +83,7 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 				Type:                types.BoolType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -75,7 +94,7 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 				Type:                types.BoolType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -86,7 +105,7 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 				Type:                types.BoolType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -109,7 +128,7 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 					)},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -132,7 +151,7 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 					)},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -145,8 +164,9 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 					ElemType: types.StringType,
 				},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
+					resource.UseStateForUnknown(),
 					modifier.UseDefaultModifier(types.Map{ElemType: types.StringType, Null: false}),
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -164,7 +184,8 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 							Type:                types.StringType,
 							Validators:          []tfsdk.AttributeValidator{validator.IsCIDR()},
 							PlanModifiers: tfsdk.AttributePlanModifiers{
-								resource.RequiresReplace(),
+								resource.UseStateForUnknown(),
+								modifier.RequiresReplaceComputed(),
 							},
 						},
 						"gateway": {
@@ -175,7 +196,7 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 							Validators:          []tfsdk.AttributeValidator{validator.IsIpAdress()},
 							PlanModifiers: tfsdk.AttributePlanModifiers{
 								resource.UseStateForUnknown(),
-								resource.RequiresReplace(),
+								modifier.RequiresReplaceComputed(),
 							},
 						},
 					},
@@ -183,11 +204,6 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 			},
 		}),
 	}, nil
-}
-
-// Configure adds the provider configured client to the data source.
-func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	r.genericResource.Configure(ctx, req, resp)
 }
 
 // toPodmanNetwork converts a resource data to a podman network
@@ -235,7 +251,7 @@ func toPodmanNetwork(ctx context.Context, d networkResourceData, diags *diag.Dia
 // fromNetwork converts a podman network to a resource data
 func fromPodmanNetwork(n ntypes.Network, diags *diag.Diagnostics) *networkResourceData {
 	d := &networkResourceData{
-		ID:       types.String{Value: n.Name},
+		ID:       types.String{Value: n.ID},
 		Name:     types.String{Value: n.Name},
 		DNS:      types.Bool{Value: n.DNSEnabled},
 		IPv6:     types.Bool{Value: n.IPv6Enabled},

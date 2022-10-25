@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -40,6 +41,30 @@ func (g *genericResource) Configure(_ context.Context, req resource.ConfigureReq
 	}
 }
 
+func (g *genericResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// No default labels set, skip merge
+	if g.providerData.DefaultLabels.IsNull() {
+		return
+	}
+
+	var labels types.Map
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("labels"), &labels)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	labels.Null = false
+
+	for k, v := range g.providerData.DefaultLabels.Elems {
+		if _, exist := labels.Elems[k]; exist {
+			continue
+		}
+		labels.Elems[k] = v
+	}
+
+	resp.Plan.SetAttribute(ctx, path.Root("labels"), &labels)
+}
+
 func (g genericResource) initClientData(
 	ctx context.Context,
 	data interface{},
@@ -71,7 +96,8 @@ func withGenericAttributes(attributes map[string]tfsdk.Attribute) map[string]tfs
 		Validators:  []tfsdk.AttributeValidator{validator.MatchName()},
 		Type:        types.StringType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
-			resource.RequiresReplace(),
+			resource.UseStateForUnknown(),
+			modifier.RequiresReplaceComputed(),
 		},
 	}
 
@@ -83,17 +109,24 @@ func withGenericAttributes(attributes map[string]tfsdk.Attribute) map[string]tfs
 		Type: types.MapType{
 			ElemType: types.StringType,
 		},
-		PlanModifiers: tfsdk.AttributePlanModifiers{
-			modifier.UseDefaultModifier(types.Map{ElemType: types.StringType, Null: false}),
-			resource.RequiresReplace(),
-		},
+		//		PlanModifiers: tfsdk.AttributePlanModifiers{
+		//			modifier.UseDefaultModifier(types.Map{ElemType: types.StringType, Null: false}),
+		//			resource.UseStateForUnknown(),
+		//			resource.RequiresReplace(),
+		//		},
 	}
 
-	// ID is only used for testing and will be always equal to name
 	attributes["id"] = tfsdk.Attribute{
-		Description: "Id aliases to name",
+		Description: "ID of the resource",
 		Type:        types.StringType,
 		Computed:    true,
+		PlanModifiers: []tfsdk.AttributePlanModifier{
+			resource.UseStateForUnknown(),
+			modifier.RequiresReplaceComputed(),
+			// note: we may need a custom version of RequiresReplace as it does not support replace on computed attributes.
+			// Podman (go bindingds only?) looks up resource by name or id so it may not trigger replace.
+			// resource.RequiresReplace(),
+		},
 	}
 
 	return attributes

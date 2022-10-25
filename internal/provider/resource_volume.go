@@ -64,7 +64,6 @@ func (t volumeResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagn
 				},
 			},
 		}),
-
 		Blocks: map[string]tfsdk.Block{},
 	}, nil
 }
@@ -75,6 +74,7 @@ func (r *volumeResource) Configure(ctx context.Context, req resource.ConfigureRe
 }
 
 func fromVolumeResponse(v *entities.VolumeConfigResponse, diags *diag.Diagnostics) *volumeResourceData {
+	// note: volumes do not have IDs, it wilbe mapped to the unique name
 	return &volumeResourceData{
 		ID:      types.String{Value: v.Name},
 		Name:    types.String{Value: v.Name},
