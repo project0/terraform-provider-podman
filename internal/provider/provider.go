@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -20,11 +19,9 @@ const (
 	podmanDefaultURI = "unix:///run/podman/podman.sock"
 )
 
-// provider satisfies the tfsdk.Provider interface and usually is included
+// podmanProvider satisfies the provider.Provider interface and usually is included
 // with all Resource and DataSource implementations.
-type podmanProvider struct {
-	// client is the configured connection context for the
-}
+type podmanProvider struct{}
 
 // providerData can be used to store data from the Terraform configuration.
 type providerData struct {
@@ -32,6 +29,7 @@ type providerData struct {
 	Identity types.String `tfsdk:"identity"`
 }
 
+// New creates a new podman provider.
 func New() provider.Provider {
 	return &podmanProvider{}
 }
@@ -113,11 +111,11 @@ func newPodmanClient(ctx context.Context, diags *diag.Diagnostics, data provider
 		uri = testuri
 	}
 
-	if data.URI.Value != "" {
-		uri = data.URI.Value
+	if data.URI.ValueString() != "" {
+		uri = data.URI.ValueString()
 	}
 
-	c, err := bindings.NewConnectionWithIdentity(ctx, uri, data.Identity.Value, false)
+	c, err := bindings.NewConnectionWithIdentity(ctx, uri, data.Identity.ValueString(), false)
 	if err != nil {
 		diags.AddError("Failed to initialize connection to podman server", fmt.Sprintf("URI: %s, error: %s", uri, err.Error()))
 	}

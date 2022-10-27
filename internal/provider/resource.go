@@ -59,7 +59,7 @@ func (g genericResource) initClientData(
 	return newPodmanClient(ctx, diags, g.providerData)
 }
 
-// re-usable type definitions
+// withGenericAttributes returns re-usable standard type definitions
 func withGenericAttributes(attributes map[string]tfsdk.Attribute) map[string]tfsdk.Attribute {
 	// Name is also used as unique id in podman,
 	// IDs itself only exists for docker compatibility and therefore does not make sense to implement
@@ -71,7 +71,8 @@ func withGenericAttributes(attributes map[string]tfsdk.Attribute) map[string]tfs
 		Validators:  []tfsdk.AttributeValidator{validator.MatchName()},
 		Type:        types.StringType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
-			resource.RequiresReplace(),
+			resource.UseStateForUnknown(),
+			modifier.RequiresReplaceComputed(),
 		},
 	}
 
@@ -85,15 +86,20 @@ func withGenericAttributes(attributes map[string]tfsdk.Attribute) map[string]tfs
 		},
 		PlanModifiers: tfsdk.AttributePlanModifiers{
 			modifier.UseDefaultModifier(types.Map{ElemType: types.StringType, Null: false}),
-			resource.RequiresReplace(),
+			resource.UseStateForUnknown(),
+			modifier.RequiresReplaceComputed(),
 		},
 	}
 
-	// ID is only used for testing and will be always equal to name
 	attributes["id"] = tfsdk.Attribute{
-		Description: "Id aliases to name",
+		Description: "ID of the resource",
 		Type:        types.StringType,
 		Computed:    true,
+		PlanModifiers: []tfsdk.AttributePlanModifier{
+			resource.UseStateForUnknown(),
+			// Podman (go bindingds only?) looks up resource by name or id so it may not trigger replace.
+			modifier.RequiresReplaceComputed(),
+		},
 	}
 
 	return attributes

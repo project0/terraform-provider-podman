@@ -43,15 +43,29 @@ type (
 	}
 )
 
+// Ensure the implementation satisfies the expected interfaces.
+var (
+	_ resource.Resource                = &networkResource{}
+	_ resource.ResourceWithConfigure   = &networkResource{}
+	_ resource.ResourceWithImportState = &networkResource{}
+)
+
+// NewNetworkResource creates a new network resource.
 func NewNetworkResource() resource.Resource {
 	return &networkResource{}
 }
 
-// Metadata returns the data source type name.
+// Configure adds the provider configured client to the resource.
+func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	r.genericResource.Configure(ctx, req, resp)
+}
+
+// Metadata returns the resource type name.
 func (r networkResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_network"
 }
 
+// GetSchema returns the resource schema.
 func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		// This description is used by the documentation generator and the language server.
@@ -64,7 +78,7 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 				Type:                types.BoolType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -75,7 +89,7 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 				Type:                types.BoolType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -86,7 +100,7 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 				Type:                types.BoolType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -109,13 +123,13 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 					)},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
 			"ipam_driver": {
 				Computed: true,
-				Optional: true, // TODO
+				Optional: true,
 				MarkdownDescription: fmt.Sprintf(
 					"Set the ipam driver (IP Address Management Driver) for the network. Valid values are `%s`, `%s`, `%s`. When unset podman will choose an ipam driver automatically based on the network driver.",
 					ntypes.HostLocalIPAMDriver,
@@ -132,7 +146,7 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 					)},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -146,7 +160,7 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 				},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					modifier.UseDefaultModifier(types.Map{ElemType: types.StringType, Null: false}),
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -175,7 +189,7 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 							Validators:          []tfsdk.AttributeValidator{validator.IsIpAdress()},
 							PlanModifiers: tfsdk.AttributePlanModifiers{
 								resource.UseStateForUnknown(),
-								resource.RequiresReplace(),
+								modifier.RequiresReplaceComputed(),
 							},
 						},
 					},
@@ -185,35 +199,30 @@ func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 	}, nil
 }
 
-// Configure adds the provider configured client to the data source.
-func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	r.genericResource.Configure(ctx, req, resp)
-}
-
 // toPodmanNetwork converts a resource data to a podman network
 func toPodmanNetwork(ctx context.Context, d networkResourceData, diags *diag.Diagnostics) *ntypes.Network {
 	var nw = &ntypes.Network{
-		Name:        d.Name.Value,
-		Driver:      d.Driver.Value,
-		IPv6Enabled: d.IPv6.Value,
-		DNSEnabled:  d.DNS.Value,
-		Internal:    d.Internal.Value,
+		Name:        d.Name.ValueString(),
+		Driver:      d.Driver.ValueString(),
+		IPv6Enabled: d.IPv6.ValueBool(),
+		DNSEnabled:  d.DNS.ValueBool(),
+		Internal:    d.Internal.ValueBool(),
 	}
 
 	// Convert map types
 	diags.Append(d.Labels.ElementsAs(ctx, &nw.Labels, true)...)
 	diags.Append(d.Options.ElementsAs(ctx, &nw.Options, true)...)
 
-	if !d.IPAMDriver.Null {
+	if !d.IPAMDriver.IsNull() {
 		ipam := map[string]string{
-			"driver": d.IPAMDriver.Value,
+			"driver": d.IPAMDriver.ValueString(),
 		}
 		nw.IPAMOptions = ipam
 	}
 
 	// subnet
 	for _, s := range d.Subnets {
-		_, ipNet, err := net.ParseCIDR(s.Subnet.Value)
+		_, ipNet, err := net.ParseCIDR(s.Subnet.ValueString())
 		if err != nil {
 			diags.AddError("Cannot parse subnet CIDR", err.Error())
 			continue
@@ -223,8 +232,8 @@ func toPodmanNetwork(ctx context.Context, d networkResourceData, diags *diag.Dia
 				IPNet: *ipNet,
 			},
 		}
-		if !s.Gateway.Null {
-			subnet.Gateway = net.ParseIP(s.Gateway.Value)
+		if !s.Gateway.IsNull() {
+			subnet.Gateway = net.ParseIP(s.Gateway.ValueString())
 		}
 		nw.Subnets = append(nw.Subnets, *subnet)
 	}

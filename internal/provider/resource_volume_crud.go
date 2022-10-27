@@ -23,8 +23,8 @@ func (r volumeResource) Create(ctx context.Context, req resource.CreateRequest, 
 	var volCreate = &entities.VolumeCreateOptions{
 		// null values are automatically empty string
 		// as we do not use pointer we do not need to distinguish and pass it directly
-		Name:   data.Name.Value,
-		Driver: data.Driver.Value,
+		Name:   data.Name.ValueString(),
+		Driver: data.Driver.ValueString(),
 	}
 
 	resp.Diagnostics.Append(data.Labels.ElementsAs(ctx, &volCreate.Labels, false)...)
@@ -33,7 +33,7 @@ func (r volumeResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// optional
-	if !data.Options.Null {
+	if !data.Options.IsNull() {
 		resp.Diagnostics.Append(data.Options.ElementsAs(ctx, &volCreate.Options, true)...)
 	}
 
@@ -62,7 +62,7 @@ func (r volumeResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	volResponse, err := volumes.Inspect(client, data.Name.Value, nil)
+	volResponse, err := volumes.Inspect(client, data.ID.ValueString(), nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to read volume resource: %s", err.Error()))
 		return
@@ -92,7 +92,7 @@ func (r volumeResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	}
 
 	// TODO: Allow force ?
-	err := volumes.Remove(client, data.Name.Value, nil)
+	err := volumes.Remove(client, data.ID.ValueString(), nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to delete volume resource: %s", err.Error()))
 	}
@@ -101,6 +101,5 @@ func (r volumeResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 }
 
 func (r volumeResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
-
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

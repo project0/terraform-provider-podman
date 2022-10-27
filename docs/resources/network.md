@@ -58,7 +58,7 @@ resource "podman_network" "dualstack" {
 
 ### Read-Only
 
-- `id` (String) Id aliases to name
+- `id` (String) ID of the resource
 
 <a id="nestedatt--subnets"></a>
 ### Nested Schema for `subnets`

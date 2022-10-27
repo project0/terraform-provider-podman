@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/project0/terraform-provider-podman/internal/modifier"
 	"github.com/project0/terraform-provider-podman/internal/utils"
 )
 
@@ -27,15 +28,29 @@ type (
 	}
 )
 
+// Ensure the implementation satisfies the expected interfaces.
+var (
+	_ resource.Resource                = &podResource{}
+	_ resource.ResourceWithConfigure   = &podResource{}
+	_ resource.ResourceWithImportState = &podResource{}
+)
+
+// NewPodResource creates a new pod resource.
 func NewPodResource() resource.Resource {
 	return &podResource{}
 }
 
-// Metadata returns the data source type name.
+// Configure adds the provider configured client to the resource.
+func (r *podResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	r.genericResource.Configure(ctx, req, resp)
+}
+
+// Metadata returns the resource type name.
 func (r podResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_pod"
 }
 
+// GetSchema returns the resource schema.
 func (r podResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		// This description is used by the documentation generator and the language server.
@@ -51,7 +66,7 @@ func (r podResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnost
 				Type:     types.StringType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -92,17 +107,12 @@ func (r podResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnost
 	}, nil
 }
 
-// Configure adds the provider configured client to the data source.
-func (r *podResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	r.genericResource.Configure(ctx, req, resp)
-}
-
 func toPodmanPodSpecGenerator(ctx context.Context, d podResourceData, diags *diag.Diagnostics) *specgen.PodSpecGenerator {
 	s := specgen.NewPodSpecGenerator()
 	p := &entities.PodCreateOptions{
-		Name:         d.Name.Value,
-		CgroupParent: d.CgroupParent.Value,
-		Hostname:     d.Hostname.Value,
+		Name:         d.Name.ValueString(),
+		CgroupParent: d.CgroupParent.ValueString(),
+		Hostname:     d.Hostname.ValueString(),
 	}
 
 	diags.Append(d.Labels.ElementsAs(ctx, &p.Labels, true)...)

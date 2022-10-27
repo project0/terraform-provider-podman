@@ -33,9 +33,9 @@ func (v *genericStringValidator) Validate(ctx context.Context, req tfsdk.Validat
 		return
 	}
 
-	if str.Unknown || str.Null {
+	if str.IsUnknown() || str.IsNull() {
 		return
 	}
 
-	v.validate(ctx, req, resp, str.Value)
+	v.validate(ctx, req, resp, str.ValueString())
 }

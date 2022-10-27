@@ -53,7 +53,7 @@ func (r podResource) Read(ctx context.Context, req resource.ReadRequest, resp *r
 		return
 	}
 
-	podResponse, err := pods.Inspect(client, data.Name.Value, nil)
+	podResponse, err := pods.Inspect(client, data.ID.ValueString(), nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to read pod resource: %s", err.Error()))
 		return
@@ -84,7 +84,7 @@ func (r podResource) Delete(ctx context.Context, req resource.DeleteRequest, res
 
 	// TODO: Allow force ?
 	// TODO: handle report messages
-	_, err := pods.Remove(client, data.Name.Value, nil)
+	_, err := pods.Remove(client, data.ID.ValueString(), nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to delete pod resource: %s", err.Error()))
 	}
@@ -93,5 +93,5 @@ func (r podResource) Delete(ctx context.Context, req resource.DeleteRequest, res
 }
 
 func (r podResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

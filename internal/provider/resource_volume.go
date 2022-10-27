@@ -26,15 +26,29 @@ type (
 	}
 )
 
+// Ensure the implementation satisfies the expected interfaces.
+var (
+	_ resource.Resource                = &volumeResource{}
+	_ resource.ResourceWithConfigure   = &volumeResource{}
+	_ resource.ResourceWithImportState = &volumeResource{}
+)
+
+// NewVolumeResource creates a new volume resource.
 func NewVolumeResource() resource.Resource {
 	return &volumeResource{}
 }
 
-// Metadata returns the data source type name.
+// Configure adds the provider configured client to the resource.
+func (r *volumeResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	r.genericResource.Configure(ctx, req, resp)
+}
+
+// Metadata returns the resource type name.
 func (r volumeResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_volume"
 }
 
+// GetSchema returns the resource schema.
 func (t volumeResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		// This description is used by the documentation generator and the language server.
@@ -47,7 +61,7 @@ func (t volumeResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagn
 				Computed:            true,
 				Type:                types.StringType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 			"options": {
@@ -60,7 +74,7 @@ func (t volumeResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagn
 				},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					modifier.UseDefaultModifier(types.Map{ElemType: types.StringType, Null: false}),
-					resource.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 		}),
@@ -69,13 +83,9 @@ func (t volumeResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagn
 	}, nil
 }
 
-// Configure adds the provider configured client to the data source.
-func (r *volumeResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	r.genericResource.Configure(ctx, req, resp)
-}
-
 func fromVolumeResponse(v *entities.VolumeConfigResponse, diags *diag.Diagnostics) *volumeResourceData {
 	return &volumeResourceData{
+		// volumes do not have IDs, it wilbe mapped to the unique name
 		ID:      types.String{Value: v.Name},
 		Name:    types.String{Value: v.Name},
 		Driver:  types.String{Value: v.Driver},

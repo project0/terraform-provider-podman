@@ -11,14 +11,15 @@ import (
 
 // MapStringToMapType maps a native golang map to a terraform map type
 func MapStringToMapType(m map[string]string) types.Map {
-	tm := types.Map{
-		ElemType: types.StringType,
-		Elems:    make(map[string]attr.Value),
-	}
+	elems := make(map[string]attr.Value)
 	for k, v := range m {
-		tm.Elems[k] = types.String{Value: v}
+		elems[k] = types.String{Value: v}
 	}
-	return tm
+
+	return types.Map{
+		ElemType: types.StringType,
+		Elems:    elems,
+	}
 }
 
 // MapStringValueToStringType extracts a terraform string value from a map
