@@ -129,7 +129,6 @@ func (m Mounts) AttributeSchema() tfsdk.Attribute {
 					),
 					PlanModifiers: tfsdk.AttributePlanModifiers{
 						resource.UseStateForUnknown(),
-						resource.RequiresReplace(),
 					},
 				},
 			},
@@ -151,8 +150,8 @@ func (m Mounts) ToPodmanSpec(diags *diag.Diagnostics) ([]*specgen.NamedVolume, [
 		if mount.Volume != nil {
 			// Named volume mount options
 			specVol := specgen.NamedVolume{
-				Name: mount.Volume.Name.Value,
-				Dest: mount.Destination.Value,
+				Name: mount.Volume.Name.ValueString(),
+				Dest: mount.Destination.ValueString(),
 			}
 
 			specVol.Options = appendMountOptBool(specVol.Options, mount.Volume.ReadOnly, "ro", "rw")
@@ -160,11 +159,11 @@ func (m Mounts) ToPodmanSpec(diags *diag.Diagnostics) ([]*specgen.NamedVolume, [
 			specVol.Options = appendMountOptBool(specVol.Options, mount.Volume.Exec, "exec", "noexec")
 			specVol.Options = appendMountOptBool(specVol.Options, mount.Volume.Suid, "sui", "nosuid")
 
-			if !mount.Volume.Chown.Null && mount.Volume.Chown.Value {
+			if !mount.Volume.Chown.IsNull() && mount.Volume.Chown.ValueBool() {
 				specVol.Options = append(specVol.Options, "U")
 			}
 
-			if !mount.Volume.IDmap.Null && mount.Volume.IDmap.Value {
+			if !mount.Volume.IDmap.IsNull() && mount.Volume.IDmap.ValueBool() {
 				specVol.Options = append(specVol.Options, "idmap")
 			}
 
@@ -173,9 +172,9 @@ func (m Mounts) ToPodmanSpec(diags *diag.Diagnostics) ([]*specgen.NamedVolume, [
 		} else if mount.Bind != nil {
 			// Bind mount options
 			specMount := specs.Mount{
-				Destination: mount.Destination.Value,
+				Destination: mount.Destination.ValueString(),
 				Type:        "bind",
-				Source:      mount.Bind.Path.Value,
+				Source:      mount.Bind.Path.ValueString(),
 			}
 
 			specMount.Options = appendMountOptBool(specMount.Options, mount.Bind.ReadOnly, "ro", "rw")
@@ -183,16 +182,16 @@ func (m Mounts) ToPodmanSpec(diags *diag.Diagnostics) ([]*specgen.NamedVolume, [
 			specMount.Options = appendMountOptBool(specMount.Options, mount.Bind.Exec, "exec", "noexec")
 			specMount.Options = appendMountOptBool(specMount.Options, mount.Bind.Suid, "suid", "nosuid")
 
-			if !mount.Bind.Chown.Null && mount.Bind.Chown.Value {
+			if !mount.Bind.Chown.IsNull() && mount.Bind.Chown.ValueBool() {
 				specMount.Options = append(specMount.Options, "U")
 			}
 
-			if !mount.Bind.IDmap.Null && mount.Bind.IDmap.Value {
+			if !mount.Bind.IDmap.IsNull() && mount.Bind.IDmap.ValueBool() {
 				specMount.Options = append(specMount.Options, "idmap")
 			}
 
-			if !mount.Bind.Propagation.Null && mount.Bind.Propagation.Value != "" {
-				specMount.Options = append(specMount.Options, mount.Bind.Propagation.Value)
+			if !mount.Bind.Propagation.IsNull() && mount.Bind.Propagation.ValueString() != "" {
+				specMount.Options = append(specMount.Options, mount.Bind.Propagation.ValueString())
 			}
 			specMount.Options = appendMountOptBool(specMount.Options, mount.Bind.Recursive, "rbind", "bind")
 			// public = z, private = Z
@@ -254,8 +253,8 @@ func FromPodmanToMounts(diags *diag.Diagnostics, specMounts []define.InspectMoun
 
 // appendMountOptBool appends a mapped boolen value
 func appendMountOptBool(opts []string, v types.Bool, trueVal string, falseVal string) []string {
-	if !v.Null {
-		if v.Value {
+	if !v.IsNull() {
+		if v.ValueBool() {
 			opts = append(opts, trueVal)
 		} else {
 			opts = append(opts, falseVal)

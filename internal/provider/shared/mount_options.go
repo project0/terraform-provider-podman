@@ -5,6 +5,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/project0/terraform-provider-podman/internal/modifier"
 	"github.com/project0/terraform-provider-podman/internal/validator"
 )
 
@@ -28,7 +29,7 @@ func (m Mounts) attributeSchemaReadOnly() tfsdk.Attribute {
 		Type:        types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
 			resource.UseStateForUnknown(),
-			resource.RequiresReplace(),
+			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
@@ -41,7 +42,7 @@ func (m Mounts) attributeSchemaSuid() tfsdk.Attribute {
 		Type:        types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
 			resource.UseStateForUnknown(),
-			resource.RequiresReplace(),
+			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
@@ -55,7 +56,7 @@ func (m Mounts) attributeSchemaExec() tfsdk.Attribute {
 		Type:     types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
 			resource.UseStateForUnknown(),
-			resource.RequiresReplace(),
+			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
@@ -68,7 +69,7 @@ func (m Mounts) attributeSchemaDev() tfsdk.Attribute {
 		Type:        types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
 			resource.UseStateForUnknown(),
-			resource.RequiresReplace(),
+			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
@@ -81,7 +82,7 @@ func (m Mounts) attributeSchemaChown() tfsdk.Attribute {
 		Type:        types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
 			resource.UseStateForUnknown(),
-			resource.RequiresReplace(),
+			modifier.RequiresReplaceComputed(),
 		},
 	}
 
@@ -95,7 +96,7 @@ func (m Mounts) attributeSchemaIDmap() tfsdk.Attribute {
 		Type:        types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
 			resource.UseStateForUnknown(),
-			resource.RequiresReplace(),
+			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
@@ -120,7 +121,7 @@ func (m Mounts) attributeSchemaBindPropagation() tfsdk.Attribute {
 		},
 		PlanModifiers: tfsdk.AttributePlanModifiers{
 			resource.UseStateForUnknown(),
-			resource.RequiresReplace(),
+			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
@@ -133,7 +134,7 @@ func (m Mounts) attributeSchemaBindRecursive() tfsdk.Attribute {
 		Type:        types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
 			resource.UseStateForUnknown(),
-			resource.RequiresReplace(),
+			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
@@ -148,7 +149,7 @@ func (m Mounts) attributeSchemaRelabel() tfsdk.Attribute {
 		Type:     types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
 			resource.UseStateForUnknown(),
-			resource.RequiresReplace(),
+			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
@@ -166,64 +167,44 @@ type allMountOptions struct {
 }
 
 func parseMountOptions(diags *diag.Diagnostics, options []string) allMountOptions {
-	result := allMountOptions{}
-
-	result.readOnly.Null = true
-	// result.dev.Null = true
-	// result.exec.Null = true
-	// result.suid.Null = true
-	// result.chown.Null = true
-	// result.idmap.Null = true
-	// result.recursive.Null = true
-	// result.relabel.Null = true
-	// result.propagation.Null = true
+	result := allMountOptions{
+		readOnly:    types.BoolNull(),
+		exec:        types.BoolNull(),
+		suid:        types.BoolNull(),
+		chown:       types.BoolNull(),
+		idmap:       types.BoolNull(),
+		recursive:   types.BoolNull(),
+		relabel:     types.BoolNull(),
+		propagation: types.StringNull(),
+	}
 
 	for _, o := range options {
 
 		switch o {
 		case "ro", "rw":
-			result.readOnly.Null = false
-			if o == "ro" {
-				result.readOnly.Value = true
-			}
+			result.readOnly = types.BoolValue((o == "ro"))
 
 		case "dev", "nodev":
-			result.dev.Null = false
-			if o == "dev" {
-				result.dev.Value = true
-			}
+			result.dev = types.BoolValue((o == "dev"))
 
 		case "exec", "noexec":
-			result.dev.Null = false
-			if o == "exec" {
-				result.exec.Value = true
-			}
+			result.exec = types.BoolValue((o == "exec"))
+
 		case "suid", "nosuid":
-			result.suid.Null = false
-			if o == "suid" {
-				result.suid.Value = true
-			}
+			result.suid = types.BoolValue((o == "suid"))
 
 		case "bind", "rbind":
-			result.recursive.Null = false
-			if o == "rbind" {
-				result.recursive.Value = true
-			}
+			result.recursive = types.BoolValue((o == "rbind"))
 
-		// public = z, private = Z
+		// public = z (relabel), private = Z (no relabel)
 		case "z", "Z":
-			result.relabel.Null = false
-			if o == "z" {
-				result.relabel.Value = true
-			}
+			result.relabel = types.BoolValue((o == "z"))
 
 		case "U":
-			result.chown.Null = false
-			result.chown.Value = true
+			result.chown = types.BoolValue(true)
 
 		case "idmap":
-			result.chown.Null = false
-			result.chown.Value = true
+			result.idmap = types.BoolValue(true)
 
 		case
 			bindPropagationShared,
@@ -234,8 +215,7 @@ func parseMountOptions(diags *diag.Diagnostics, options []string) allMountOption
 			bindPropagationSlaveRecursive,
 			bindPropagationPrivateRecursive,
 			bindPropagationUnbindableRecursive:
-			result.propagation.Null = false
-			result.propagation.Value = o
+			result.propagation = types.StringValue(o)
 
 		default:
 			diags.AddWarning("Unknown mount option retrieved", o)

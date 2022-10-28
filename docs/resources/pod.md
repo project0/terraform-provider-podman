@@ -30,14 +30,21 @@ Manage pods for containers
 <a id="nestedatt--mounts"></a>
 ### Nested Schema for `mounts`
 
+Required:
+
+- `destination` (String) Target path
+
 Optional:
 
 - `bind` (Attributes) Named Volume (see [below for nested schema](#nestedatt--mounts--bind))
-- `destination` (String) Target path
 - `volume` (Attributes) Named Volume (see [below for nested schema](#nestedatt--mounts--volume))
 
 <a id="nestedatt--mounts--bind"></a>
 ### Nested Schema for `mounts.bind`
+
+Required:
+
+- `path` (String) Host path
 
 Optional:
 
@@ -45,7 +52,6 @@ Optional:
 - `dev` (Boolean) TODO
 - `exec` (Boolean) Mounting the volume with the exec(true) or noexec(false) option means that no executables on the volume will be able to executed within the pod.Defaults depends on the mount type or storage driver.
 - `idmap` (Boolean) TODO
-- `path` (String) Host path
 - `propagation` (String) TODO
 - `read_only` (Boolean) TODO
 - `recursive` (Boolean) TODO
@@ -56,13 +62,16 @@ Optional:
 <a id="nestedatt--mounts--volume"></a>
 ### Nested Schema for `mounts.volume`
 
+Required:
+
+- `name` (String) Name of the volume
+
 Optional:
 
 - `chown` (Boolean) TODO
 - `dev` (Boolean) TODO
 - `exec` (Boolean) Mounting the volume with the exec(true) or noexec(false) option means that no executables on the volume will be able to executed within the pod.Defaults depends on the mount type or storage driver.
 - `idmap` (Boolean) TODO
-- `name` (String) Name of the volume
 - `read_only` (Boolean) TODO
 - `suid` (Boolean) TODO
 
