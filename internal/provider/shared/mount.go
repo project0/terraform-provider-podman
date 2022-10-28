@@ -4,6 +4,7 @@ import (
 	"github.com/containers/podman/v4/libpod/define"
 	"github.com/containers/podman/v4/pkg/specgen"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -69,7 +70,7 @@ func (m Mounts) AttributeSchema() tfsdk.Attribute {
 						//TODO
 					},
 					PlanModifiers: tfsdk.AttributePlanModifiers{
-						tfsdk.RequiresReplace(),
+						resource.RequiresReplace(),
 					},
 				},
 				// TODO validate conflicts with
@@ -97,7 +98,7 @@ func (m Mounts) AttributeSchema() tfsdk.Attribute {
 						},
 					),
 					PlanModifiers: tfsdk.AttributePlanModifiers{
-						tfsdk.RequiresReplace(),
+						resource.RequiresReplace(),
 					},
 				},
 				"bind": {
@@ -127,15 +128,14 @@ func (m Mounts) AttributeSchema() tfsdk.Attribute {
 						},
 					),
 					PlanModifiers: tfsdk.AttributePlanModifiers{
-						tfsdk.UseStateForUnknown(),
-						tfsdk.RequiresReplace(),
+						resource.UseStateForUnknown(),
+						resource.RequiresReplace(),
 					},
 				},
 			},
-			tfsdk.SetNestedAttributesOptions{},
 		),
 		PlanModifiers: tfsdk.AttributePlanModifiers{
-			tfsdk.RequiresReplace(),
+			resource.RequiresReplace(),
 		},
 	}
 

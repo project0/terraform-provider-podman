@@ -8,6 +8,7 @@ import (
 	ntypes "github.com/containers/common/libnetwork/types"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/project0/terraform-provider-podman/internal/modifier"
@@ -19,7 +20,6 @@ type (
 	networkResource struct {
 		genericResource
 	}
-	networkResourceType struct{}
 
 	networkResourceData struct {
 		ID     types.String `tfsdk:"id"`
@@ -43,7 +43,30 @@ type (
 	}
 )
 
-func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+// Ensure the implementation satisfies the expected interfaces.
+var (
+	_ resource.Resource                = &networkResource{}
+	_ resource.ResourceWithConfigure   = &networkResource{}
+	_ resource.ResourceWithImportState = &networkResource{}
+)
+
+// NewNetworkResource creates a new network resource.
+func NewNetworkResource() resource.Resource {
+	return &networkResource{}
+}
+
+// Configure adds the provider configured client to the resource.
+func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	r.genericResource.Configure(ctx, req, resp)
+}
+
+// Metadata returns the resource type name.
+func (r networkResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_network"
+}
+
+// GetSchema returns the resource schema.
+func (r networkResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		// This description is used by the documentation generator and the language server.
 		Description: "Manage networks for containers and pods",
@@ -54,8 +77,8 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				MarkdownDescription: "Enable the DNS plugin for this network which if enabled, can perform container to container name resolution. Defaults to `false`.",
 				Type:                types.BoolType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.UseStateForUnknown(),
-					tfsdk.RequiresReplace(),
+					resource.UseStateForUnknown(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -65,8 +88,8 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				MarkdownDescription: "Enable IPv6 (Dual Stack) networking. If no subnets are given it will allocate a ipv4 and ipv6 subnet. Defaults to `false`.",
 				Type:                types.BoolType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.UseStateForUnknown(),
-					tfsdk.RequiresReplace(),
+					resource.UseStateForUnknown(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -76,8 +99,8 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				MarkdownDescription: "Internal is whether the Network should not have external routes to public or other Networks. Defaults to `false`.",
 				Type:                types.BoolType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.UseStateForUnknown(),
-					tfsdk.RequiresReplace(),
+					resource.UseStateForUnknown(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -98,14 +121,14 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 						ntypes.IPVLANNetworkDriver,
 					)},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.UseStateForUnknown(),
-					tfsdk.RequiresReplace(),
+					resource.UseStateForUnknown(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
 			"ipam_driver": {
 				Computed: true,
-				Optional: true, // TODO
+				Optional: true,
 				MarkdownDescription: fmt.Sprintf(
 					"Set the ipam driver (IP Address Management Driver) for the network. Valid values are `%s`, `%s`, `%s`. When unset podman will choose an ipam driver automatically based on the network driver.",
 					ntypes.HostLocalIPAMDriver,
@@ -120,8 +143,8 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 						"none",
 					)},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.UseStateForUnknown(),
-					tfsdk.RequiresReplace(),
+					resource.UseStateForUnknown(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -135,7 +158,7 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					modifier.UseDefaultModifier(types.Map{ElemType: types.StringType, Null: false}),
-					tfsdk.RequiresReplace(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -153,7 +176,7 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 							Type:                types.StringType,
 							Validators:          []tfsdk.AttributeValidator{validator.IsCIDR()},
 							PlanModifiers: tfsdk.AttributePlanModifiers{
-								tfsdk.RequiresReplace(),
+								resource.RequiresReplace(),
 							},
 						},
 						"gateway": {
@@ -163,52 +186,41 @@ func (t networkResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 							Type:                types.StringType,
 							Validators:          []tfsdk.AttributeValidator{validator.IsIpAdress()},
 							PlanModifiers: tfsdk.AttributePlanModifiers{
-								tfsdk.UseStateForUnknown(),
-								tfsdk.RequiresReplace(),
+								resource.UseStateForUnknown(),
+								modifier.RequiresReplaceComputed(),
 							},
 						},
 					},
-					tfsdk.SetNestedAttributesOptions{},
 				),
 			},
 		}),
 	}, nil
 }
 
-func (t networkResourceType) NewResource(ctx context.Context, in tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
-	provider, diags := convertProviderType(in)
-
-	return networkResource{
-		genericResource: genericResource{
-			provider: provider,
-		},
-	}, diags
-}
-
 // toPodmanNetwork converts a resource data to a podman network
 func toPodmanNetwork(ctx context.Context, d networkResourceData, diags *diag.Diagnostics) *ntypes.Network {
 	var nw = &ntypes.Network{
-		Name:        d.Name.Value,
-		Driver:      d.Driver.Value,
-		IPv6Enabled: d.IPv6.Value,
-		DNSEnabled:  d.DNS.Value,
-		Internal:    d.Internal.Value,
+		Name:        d.Name.ValueString(),
+		Driver:      d.Driver.ValueString(),
+		IPv6Enabled: d.IPv6.ValueBool(),
+		DNSEnabled:  d.DNS.ValueBool(),
+		Internal:    d.Internal.ValueBool(),
 	}
 
 	// Convert map types
 	diags.Append(d.Labels.ElementsAs(ctx, &nw.Labels, true)...)
 	diags.Append(d.Options.ElementsAs(ctx, &nw.Options, true)...)
 
-	if !d.IPAMDriver.Null {
+	if !d.IPAMDriver.IsNull() {
 		ipam := map[string]string{
-			"driver": d.IPAMDriver.Value,
+			"driver": d.IPAMDriver.ValueString(),
 		}
 		nw.IPAMOptions = ipam
 	}
 
 	// subnet
 	for _, s := range d.Subnets {
-		_, ipNet, err := net.ParseCIDR(s.Subnet.Value)
+		_, ipNet, err := net.ParseCIDR(s.Subnet.ValueString())
 		if err != nil {
 			diags.AddError("Cannot parse subnet CIDR", err.Error())
 			continue
@@ -218,8 +230,8 @@ func toPodmanNetwork(ctx context.Context, d networkResourceData, diags *diag.Dia
 				IPNet: *ipNet,
 			},
 		}
-		if !s.Gateway.Null {
-			subnet.Gateway = net.ParseIP(s.Gateway.Value)
+		if !s.Gateway.IsNull() {
+			subnet.Gateway = net.ParseIP(s.Gateway.ValueString())
 		}
 		nw.Subnets = append(nw.Subnets, *subnet)
 	}

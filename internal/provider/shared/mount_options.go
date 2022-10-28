@@ -2,6 +2,7 @@ package shared
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/project0/terraform-provider-podman/internal/validator"
@@ -26,8 +27,8 @@ func (m Mounts) attributeSchemaReadOnly() tfsdk.Attribute {
 		Optional:    true,
 		Type:        types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
-			tfsdk.UseStateForUnknown(),
-			tfsdk.RequiresReplace(),
+			resource.UseStateForUnknown(),
+			resource.RequiresReplace(),
 		},
 	}
 }
@@ -39,8 +40,8 @@ func (m Mounts) attributeSchemaSuid() tfsdk.Attribute {
 		Optional:    true,
 		Type:        types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
-			tfsdk.UseStateForUnknown(),
-			tfsdk.RequiresReplace(),
+			resource.UseStateForUnknown(),
+			resource.RequiresReplace(),
 		},
 	}
 }
@@ -53,8 +54,8 @@ func (m Mounts) attributeSchemaExec() tfsdk.Attribute {
 		Optional: true,
 		Type:     types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
-			tfsdk.UseStateForUnknown(),
-			tfsdk.RequiresReplace(),
+			resource.UseStateForUnknown(),
+			resource.RequiresReplace(),
 		},
 	}
 }
@@ -66,8 +67,8 @@ func (m Mounts) attributeSchemaDev() tfsdk.Attribute {
 		Optional:    true,
 		Type:        types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
-			tfsdk.UseStateForUnknown(),
-			tfsdk.RequiresReplace(),
+			resource.UseStateForUnknown(),
+			resource.RequiresReplace(),
 		},
 	}
 }
@@ -79,8 +80,8 @@ func (m Mounts) attributeSchemaChown() tfsdk.Attribute {
 		Optional:    true,
 		Type:        types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
-			tfsdk.UseStateForUnknown(),
-			tfsdk.RequiresReplace(),
+			resource.UseStateForUnknown(),
+			resource.RequiresReplace(),
 		},
 	}
 
@@ -93,8 +94,8 @@ func (m Mounts) attributeSchemaIDmap() tfsdk.Attribute {
 		Optional:    true,
 		Type:        types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
-			tfsdk.UseStateForUnknown(),
-			tfsdk.RequiresReplace(),
+			resource.UseStateForUnknown(),
+			resource.RequiresReplace(),
 		},
 	}
 }
@@ -118,8 +119,8 @@ func (m Mounts) attributeSchemaBindPropagation() tfsdk.Attribute {
 			),
 		},
 		PlanModifiers: tfsdk.AttributePlanModifiers{
-			tfsdk.UseStateForUnknown(),
-			tfsdk.RequiresReplace(),
+			resource.UseStateForUnknown(),
+			resource.RequiresReplace(),
 		},
 	}
 }
@@ -131,8 +132,8 @@ func (m Mounts) attributeSchemaBindRecursive() tfsdk.Attribute {
 		Optional:    true,
 		Type:        types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
-			tfsdk.UseStateForUnknown(),
-			tfsdk.RequiresReplace(),
+			resource.UseStateForUnknown(),
+			resource.RequiresReplace(),
 		},
 	}
 }
@@ -146,8 +147,8 @@ func (m Mounts) attributeSchemaRelabel() tfsdk.Attribute {
 		Optional: true,
 		Type:     types.BoolType,
 		PlanModifiers: tfsdk.AttributePlanModifiers{
-			tfsdk.UseStateForUnknown(),
-			tfsdk.RequiresReplace(),
+			resource.UseStateForUnknown(),
+			resource.RequiresReplace(),
 		},
 	}
 }

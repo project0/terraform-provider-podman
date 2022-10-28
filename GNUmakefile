@@ -4,6 +4,8 @@ GOFLAGS ?= -tags=remote,exclude_graphdriver_btrfs,btrfs_noversion,exclude_graphd
 TEST_DOCKER_COMPOSE ?= tcp://localhost:10888
 TF_ACC_TEST_PROVIDER_PODMAN_URI ?= $(TEST_DOCKER_COMPOSE)
 
+export PODMAN_VERSION ?= latest
+
 default: testacc
 
 # Run acceptance tests (optional in rootless docker)

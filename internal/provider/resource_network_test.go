@@ -100,7 +100,7 @@ func testAccResourceNetworkDualStack(configurableAttribute string) string {
 	resource "podman_network" "dualstack" {
 		name        =  %[1]q
 		driver      = "bridge"
-		ipam_driver = "dhcp"
+		ipam_driver = "host-local"
 		options = {
 			mtu = 1500
 		}

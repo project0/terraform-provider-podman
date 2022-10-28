@@ -25,7 +25,7 @@ Manage pods for containers
 
 ### Read-Only
 
-- `id` (String) Id aliases to name
+- `id` (String) ID of the resource
 
 <a id="nestedatt--mounts"></a>
 ### Nested Schema for `mounts`

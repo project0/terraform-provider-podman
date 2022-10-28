@@ -7,8 +7,10 @@ import (
 	"github.com/containers/podman/v4/pkg/domain/entities"
 	"github.com/containers/podman/v4/pkg/specgen"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/project0/terraform-provider-podman/internal/modifier"
 	"github.com/project0/terraform-provider-podman/internal/provider/shared"
 	"github.com/project0/terraform-provider-podman/internal/utils"
 )
@@ -17,7 +19,6 @@ type (
 	podResource struct {
 		genericResource
 	}
-	podResourceType struct{}
 	podResourceData struct {
 		ID     types.String `tfsdk:"id"`
 		Name   types.String `tfsdk:"name"`
@@ -30,7 +31,30 @@ type (
 	}
 )
 
-func (t podResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+// Ensure the implementation satisfies the expected interfaces.
+var (
+	_ resource.Resource                = &podResource{}
+	_ resource.ResourceWithConfigure   = &podResource{}
+	_ resource.ResourceWithImportState = &podResource{}
+)
+
+// NewPodResource creates a new pod resource.
+func NewPodResource() resource.Resource {
+	return &podResource{}
+}
+
+// Configure adds the provider configured client to the resource.
+func (r *podResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	r.genericResource.Configure(ctx, req, resp)
+}
+
+// Metadata returns the resource type name.
+func (r podResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_pod"
+}
+
+// GetSchema returns the resource schema.
+func (r podResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	mountsAttr := make(shared.Mounts, 0)
 	return tfsdk.Schema{
 		// This description is used by the documentation generator and the language server.
@@ -45,8 +69,8 @@ func (t podResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 				Computed: true,
 				Type:     types.StringType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.UseStateForUnknown(),
-					tfsdk.RequiresReplace(),
+					resource.UseStateForUnknown(),
+					modifier.RequiresReplaceComputed(),
 				},
 			},
 
@@ -59,8 +83,8 @@ func (t podResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 				Computed: false,
 				Type:     types.StringType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
-					tfsdk.UseStateForUnknown(),
-					tfsdk.RequiresReplace(),
+					resource.UseStateForUnknown(),
+					resource.RequiresReplace(),
 				},
 			},
 
@@ -75,8 +99,8 @@ func (t podResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 							Computed: true,
 							Type:     types.BoolType,
 							PlanModifiers: tfsdk.AttributePlanModifiers{
-								tfsdk.UseStateForUnknown(),
-								tfsdk.RequiresReplace(),
+								resource.UseStateForUnknown(),
+								resource.RequiresReplace(),
 							},
 						},
 
@@ -89,23 +113,12 @@ func (t podResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 	}, nil
 }
 
-func (t podResourceType) NewResource(ctx context.Context, in tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
-	provider, diags := convertProviderType(in)
-
-	return podResource{
-		genericResource: genericResource{
-			provider: provider,
-		},
-	}, diags
-}
-
-func (d podResourceData) toPodmanPodSpecGenerator(ctx context.Context, diags *diag.Diagnostics) *specgen.PodSpecGenerator {
+func toPodmanPodSpecGenerator(ctx context.Context, d podResourceData, diags *diag.Diagnostics) *specgen.PodSpecGenerator {
 	s := specgen.NewPodSpecGenerator()
 	p := &entities.PodCreateOptions{
-		Name:         d.Name.Value,
-		CgroupParent: d.CgroupParent.Value,
-		Hostname:     d.Hostname.Value,
-		Infra:        true, // without infra no volumes?
+		Name:         d.Name.ValueString(),
+		CgroupParent: d.CgroupParent.ValueString(),
+		Hostname:     d.Hostname.ValueString(),
 	}
 
 	diags.Append(d.Labels.ElementsAs(ctx, &p.Labels, true)...)

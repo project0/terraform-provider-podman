@@ -6,12 +6,12 @@ import (
 
 	"github.com/containers/podman/v4/pkg/bindings/network"
 
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/project0/terraform-provider-podman/internal/utils"
 )
 
-func (r networkResource) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r networkResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data networkResourceData
 
 	client := r.initClientData(ctx, &data, req.Config.Get, &resp.Diagnostics)
@@ -34,7 +34,7 @@ func (r networkResource) Create(ctx context.Context, req tfsdk.CreateResourceReq
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r networkResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r networkResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data networkResourceData
 
 	client := r.initClientData(ctx, &data, req.State.Get, &resp.Diagnostics)
@@ -42,7 +42,7 @@ func (r networkResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest
 		return
 	}
 
-	networkResponse, err := network.Inspect(client, data.Name.Value, nil)
+	networkResponse, err := network.Inspect(client, data.ID.ValueString(), nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to read network resource: %s", err.Error()))
 		return
@@ -53,7 +53,7 @@ func (r networkResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest
 }
 
 // Update is not implemented
-func (r networkResource) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r networkResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	utils.AddUnexpectedError(
 		&resp.Diagnostics,
 		"Update triggered for a network resource",
@@ -61,7 +61,7 @@ func (r networkResource) Update(ctx context.Context, req tfsdk.UpdateResourceReq
 	)
 }
 
-func (r networkResource) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r networkResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data networkResourceData
 
 	client := r.initClientData(ctx, &data, req.State.Get, &resp.Diagnostics)
@@ -70,7 +70,7 @@ func (r networkResource) Delete(ctx context.Context, req tfsdk.DeleteResourceReq
 	}
 
 	// TODO: Allow force which detaches containers from network?
-	rmErrors, err := network.Remove(client, data.Name.Value, nil)
+	rmErrors, err := network.Remove(client, data.ID.ValueString(), nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to delete network resource: %s", err.Error()))
 	}
@@ -83,6 +83,6 @@ func (r networkResource) Delete(ctx context.Context, req tfsdk.DeleteResourceReq
 	resp.State.RemoveResource(ctx)
 }
 
-func (r networkResource) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("name"), req, resp)
+func (r networkResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

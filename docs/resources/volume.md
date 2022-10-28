@@ -44,6 +44,6 @@ resource "podman_volume" "tmpfs" {
 
 ### Read-Only
 
-- `id` (String) Id aliases to name
+- `id` (String) ID of the resource
 
 

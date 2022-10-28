@@ -6,12 +6,12 @@ import (
 
 	"github.com/containers/podman/v4/pkg/bindings/pods"
 	"github.com/containers/podman/v4/pkg/domain/entities"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/project0/terraform-provider-podman/internal/utils"
 )
 
-func (r podResource) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r podResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data podResourceData
 
 	client := r.initClientData(ctx, &data, req.Config.Get, &resp.Diagnostics)
@@ -19,7 +19,7 @@ func (r podResource) Create(ctx context.Context, req tfsdk.CreateResourceRequest
 		return
 	}
 
-	podSpec := data.toPodmanPodSpecGenerator(ctx, &resp.Diagnostics)
+	podSpec := toPodmanPodSpecGenerator(ctx, data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -45,7 +45,7 @@ func (r podResource) Create(ctx context.Context, req tfsdk.CreateResourceRequest
 	)
 }
 
-func (r podResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r podResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data podResourceData
 
 	client := r.initClientData(ctx, &data, req.State.Get, &resp.Diagnostics)
@@ -53,7 +53,7 @@ func (r podResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest, re
 		return
 	}
 
-	podResponse, err := pods.Inspect(client, data.Name.Value, nil)
+	podResponse, err := pods.Inspect(client, data.ID.ValueString(), nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to read pod resource: %s", err.Error()))
 		return
@@ -66,7 +66,7 @@ func (r podResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest, re
 }
 
 // Update is not implemented
-func (r podResource) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r podResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	utils.AddUnexpectedError(
 		&resp.Diagnostics,
 		"Update triggered for a pod resource",
@@ -74,7 +74,7 @@ func (r podResource) Update(ctx context.Context, req tfsdk.UpdateResourceRequest
 	)
 }
 
-func (r podResource) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r podResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data podResourceData
 
 	client := r.initClientData(ctx, &data, req.State.Get, &resp.Diagnostics)
@@ -84,7 +84,7 @@ func (r podResource) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest
 
 	// TODO: Allow force ?
 	// TODO: handle report messages
-	_, err := pods.Remove(client, data.Name.Value, nil)
+	_, err := pods.Remove(client, data.ID.ValueString(), nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to delete pod resource: %s", err.Error()))
 	}
@@ -92,6 +92,6 @@ func (r podResource) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest
 	resp.State.RemoveResource(ctx)
 }
 
-func (r podResource) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("name"), req, resp)
+func (r podResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

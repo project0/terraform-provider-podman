@@ -6,12 +6,12 @@ import (
 
 	"github.com/containers/podman/v4/pkg/bindings/volumes"
 	"github.com/containers/podman/v4/pkg/domain/entities"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/project0/terraform-provider-podman/internal/utils"
 )
 
-func (r volumeResource) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r volumeResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data volumeResourceData
 
 	client := r.initClientData(ctx, &data, req.Config.Get, &resp.Diagnostics)
@@ -23,8 +23,8 @@ func (r volumeResource) Create(ctx context.Context, req tfsdk.CreateResourceRequ
 	var volCreate = &entities.VolumeCreateOptions{
 		// null values are automatically empty string
 		// as we do not use pointer we do not need to distinguish and pass it directly
-		Name:   data.Name.Value,
-		Driver: data.Driver.Value,
+		Name:   data.Name.ValueString(),
+		Driver: data.Driver.ValueString(),
 	}
 
 	resp.Diagnostics.Append(data.Labels.ElementsAs(ctx, &volCreate.Labels, false)...)
@@ -33,7 +33,7 @@ func (r volumeResource) Create(ctx context.Context, req tfsdk.CreateResourceRequ
 	}
 
 	// optional
-	if !data.Options.Null {
+	if !data.Options.IsNull() {
 		resp.Diagnostics.Append(data.Options.ElementsAs(ctx, &volCreate.Options, true)...)
 	}
 
@@ -54,7 +54,7 @@ func (r volumeResource) Create(ctx context.Context, req tfsdk.CreateResourceRequ
 	)
 }
 
-func (r volumeResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r volumeResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data volumeResourceData
 
 	client := r.initClientData(ctx, &data, req.State.Get, &resp.Diagnostics)
@@ -62,7 +62,7 @@ func (r volumeResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest,
 		return
 	}
 
-	volResponse, err := volumes.Inspect(client, data.Name.Value, nil)
+	volResponse, err := volumes.Inspect(client, data.ID.ValueString(), nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to read volume resource: %s", err.Error()))
 		return
@@ -75,7 +75,7 @@ func (r volumeResource) Read(ctx context.Context, req tfsdk.ReadResourceRequest,
 }
 
 // Update is not implemented
-func (r volumeResource) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r volumeResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	utils.AddUnexpectedError(
 		&resp.Diagnostics,
 		"Update triggered for a volume resource",
@@ -83,7 +83,7 @@ func (r volumeResource) Update(ctx context.Context, req tfsdk.UpdateResourceRequ
 	)
 }
 
-func (r volumeResource) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r volumeResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data volumeResourceData
 
 	client := r.initClientData(ctx, &data, req.State.Get, &resp.Diagnostics)
@@ -92,7 +92,7 @@ func (r volumeResource) Delete(ctx context.Context, req tfsdk.DeleteResourceRequ
 	}
 
 	// TODO: Allow force ?
-	err := volumes.Remove(client, data.Name.Value, nil)
+	err := volumes.Remove(client, data.ID.ValueString(), nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to delete volume resource: %s", err.Error()))
 	}
@@ -100,6 +100,6 @@ func (r volumeResource) Delete(ctx context.Context, req tfsdk.DeleteResourceRequ
 	resp.State.RemoveResource(ctx)
 }
 
-func (r volumeResource) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("name"), req, resp)
+func (r volumeResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

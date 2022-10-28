@@ -19,7 +19,7 @@ permissions:
 env:
   # Go language version to use for building. This value should also be updated
   # in the release workflow if changed.
-  GO_VERSION: '1.17'
+  GO_VERSION: '1.19'
   # https://github.com/containers/podman/issues/12548
   GOFLAGS: '-tags=remote,exclude_graphdriver_btrfs,btrfs_noversion,exclude_graphdriver_devicemapper,containers_image_openpgp'
 
@@ -82,6 +82,14 @@ jobs:
         terraform:
           - '1.0.*'
           - '1.1.*'
+          - '1.2.*'
+          - '1.3.*'
+        # needs to exist in https://github.com/project0/podman-container
+        podman:
+          - '4.0'
+          - '4.1'
+          - '4.2'
+          - '4.3'
     steps:
       - uses: actions/setup-go@v3
         with:
@@ -92,6 +100,8 @@ jobs:
           terraform_wrapper: false
       - uses: actions/checkout@v3
       - name: Build and execute podman daemon
+        env:
+          PODMAN_VERSION: ${{ matrix.podman }}
         run: docker-compose up -d
       - uses: actions/cache@v3
         with:
