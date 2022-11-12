@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/project0/terraform-provider-podman/internal/modifier"
+	"github.com/project0/terraform-provider-podman/internal/provider/shared"
 	"github.com/project0/terraform-provider-podman/internal/utils"
 )
 
@@ -25,6 +26,8 @@ type (
 
 		CgroupParent types.String `tfsdk:"cgroup_parent"`
 		Hostname     types.String `tfsdk:"hostname"`
+
+		Mounts shared.Mounts `tfsdk:"mounts"`
 	}
 )
 
@@ -52,6 +55,7 @@ func (r podResource) Metadata(_ context.Context, req resource.MetadataRequest, r
 
 // GetSchema returns the resource schema.
 func (r podResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+	mountsAttr := make(shared.Mounts, 0)
 	return tfsdk.Schema{
 		// This description is used by the documentation generator and the language server.
 		Description: "Manage pods for containers",
@@ -84,6 +88,8 @@ func (r podResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnost
 				},
 			},
 
+			"mounts": mountsAttr.AttributeSchema(),
+
 			// infra container settings
 			/*			"infra": {
 							Description: "Infra tells the pod to create an infra container or not. " +
@@ -113,23 +119,29 @@ func toPodmanPodSpecGenerator(ctx context.Context, d podResourceData, diags *dia
 		Name:         d.Name.ValueString(),
 		CgroupParent: d.CgroupParent.ValueString(),
 		Hostname:     d.Hostname.ValueString(),
+		Infra:        true,
 	}
 
 	diags.Append(d.Labels.ElementsAs(ctx, &p.Labels, true)...)
-
 	sp, err := entities.ToPodSpecGen(*s, p)
 	if err != nil {
+		diags.AddError("Invalid pod configuration", fmt.Sprintf("Cannot build pod configuration: %q", err.Error()))
+	}
+	// add storage
+	sp.Volumes, sp.Mounts = d.Mounts.ToPodmanSpec(diags)
+	if err := sp.Validate(); err != nil {
 		diags.AddError("Invalid pod configuration", fmt.Sprintf("Cannot build pod configuration: %q", err.Error()))
 	}
 	return sp
 }
 
 func fromPodResponse(p *entities.PodInspectReport, diags *diag.Diagnostics) *podResourceData {
-	d := &podResourceData{
-		ID:     types.String{Value: p.Name},
-		Name:   types.String{Value: p.Name},
-		Labels: utils.MapStringToMapType(p.Labels),
 
+	d := &podResourceData{
+		ID:           types.String{Value: p.ID},
+		Name:         types.String{Value: p.Name},
+		Labels:       utils.MapStringToMapType(p.Labels),
+		Mounts:       shared.FromPodmanToMounts(diags, p.Mounts),
 		CgroupParent: types.String{Value: p.CgroupParent},
 		Hostname:     types.String{Value: p.Hostname, Null: p.Hostname == ""},
 	}

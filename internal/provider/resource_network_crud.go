@@ -42,6 +42,14 @@ func (r networkResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
+	if exist, err := network.Exists(client, data.ID.ValueString(), nil); err != nil {
+		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to read network resource: %s", err.Error()))
+		return
+	} else if !exist {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	networkResponse, err := network.Inspect(client, data.ID.ValueString(), nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to read network resource: %s", err.Error()))

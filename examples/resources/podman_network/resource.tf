@@ -3,9 +3,8 @@ resource "podman_network" "network" {}
 
 # Full dual-stack example (netavark backend)
 resource "podman_network" "dualstack" {
-  name        = "dualstack"
-  driver      = "bridge"
-  ipam_driver = "dhcp"
+  name   = "dualstack"
+  driver = "bridge"
   options = {
     mtu = 1500
   }
@@ -19,7 +18,7 @@ resource "podman_network" "dualstack" {
       gateway = "2001:db8::1"
     },
     {
-      subnet  = "192.0.2.0/24/24"
+      subnet  = "192.0.2.0/24"
       gateway = "192.0.2.1"
     }
   ]

@@ -8,15 +8,18 @@ import (
 )
 
 func TestAccResourceVolume_basic(t *testing.T) {
+	name1 := generateResourceName()
+	name2 := generateResourceName()
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccResourceVolumeConfig(testName("one")),
+				Config: testAccResourceVolumeConfig(name1),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("podman_volume.test", "name", testName("one")),
+					resource.TestCheckResourceAttr("podman_volume.test", "name", name1),
 				),
 			},
 			// ImportState testing
@@ -24,17 +27,12 @@ func TestAccResourceVolume_basic(t *testing.T) {
 				ResourceName:      "podman_volume.test",
 				ImportState:       true,
 				ImportStateVerify: true,
-				// This is not normally necessary, but is here because this
-				// example code does not have an actual upstream service.
-				// Once the Read method is able to refresh information from
-				// the upstream service, this can be removed.
-				ImportStateVerifyIgnore: []string{"configurable_attribute"},
 			},
 			// Update and Read testing
 			{
-				Config: testAccResourceVolumeConfig(testName("two")),
+				Config: testAccResourceVolumeConfig(name2),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("podman_volume.test", "name", testName("two")),
+					resource.TestCheckResourceAttr("podman_volume.test", "name", name2),
 				),
 			},
 			// Delete testing automatically occurs in TestCase
@@ -43,13 +41,14 @@ func TestAccResourceVolume_basic(t *testing.T) {
 }
 
 func TestAccResourceVolume_local(t *testing.T) {
+	name1 := generateResourceName()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccResourceVolumeConfigFull("local", "type", "tmpfs"),
+				Config: testAccResourceVolumeConfigFull(name1, "local", "type", "tmpfs"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("podman_volume.test", "driver", "local"),
 				),
@@ -62,7 +61,7 @@ func TestAccResourceVolume_local(t *testing.T) {
 			},
 			// Update and Read testing
 			{
-				Config: testAccResourceVolumeConfigFull("local", "o", "noexec"),
+				Config: testAccResourceVolumeConfigFull(name1, "local", "o", "noexec"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("podman_volume.test", "driver", "local"),
 				),
@@ -72,17 +71,19 @@ func TestAccResourceVolume_local(t *testing.T) {
 	})
 }
 
-func testAccResourceVolumeConfig(configurableAttribute string) string {
+func testAccResourceVolumeConfig(name string) string {
 	return fmt.Sprintf(`
 resource "podman_volume" "test" {
   name = %[1]q
 }
-`, configurableAttribute)
+`, name)
 }
 
-func testAccResourceVolumeConfigFull(driver, optkey, optvalue string) string {
+func testAccResourceVolumeConfigFull(name, driver, optkey, optvalue string) string {
 	return fmt.Sprintf(`
 resource "podman_volume" "test" {
+	name = %[1]q
+
 	driver = %[1]q
 	options = {
      %[2]q = %[3]q

@@ -62,6 +62,14 @@ func (r volumeResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
+	if exist, err := volumes.Exists(client, data.ID.ValueString(), nil); err != nil {
+		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to read volume resource: %s", err.Error()))
+		return
+	} else if !exist {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	volResponse, err := volumes.Inspect(client, data.ID.ValueString(), nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to read volume resource: %s", err.Error()))

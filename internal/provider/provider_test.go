@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 )
 
 // testAccProtoV6ProviderFactories are used to instantiate a provider during
@@ -15,8 +16,9 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 	"podman": providerserver.NewProtocol6WithError(New()),
 }
 
-func testName(name string) string {
-	return "tf-testacc-" + name
+// GenerateResourceName generates a random name with a constant prefix, useful for acceptance tests
+func generateResourceName() string {
+	return "tf-testacc-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 }
 
 func testAccPreCheck(t *testing.T) {
