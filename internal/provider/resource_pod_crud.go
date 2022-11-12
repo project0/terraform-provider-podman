@@ -2,12 +2,14 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/containers/podman/v4/pkg/bindings/pods"
 	"github.com/containers/podman/v4/pkg/domain/entities"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/project0/terraform-provider-podman/internal/utils"
 )
 
@@ -38,6 +40,8 @@ func (r podResource) Create(ctx context.Context, req resource.CreateRequest, res
 		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to read pod resource after creation: %s", err.Error()))
 		return
 	}
+	m, _ := json.MarshalIndent(podResponse, "", "  ")
+	tflog.Info(ctx, "read pod: %v", map[string]interface{}{"response": m})
 
 	// Set state
 	resp.Diagnostics.Append(
@@ -53,9 +57,17 @@ func (r podResource) Read(ctx context.Context, req resource.ReadRequest, resp *r
 		return
 	}
 
+	if exist, err := pods.Exists(client, data.ID.ValueString(), nil); err != nil {
+		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to read (exists) pod resource: %s", err.Error()))
+		return
+	} else if !exist {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	podResponse, err := pods.Inspect(client, data.ID.ValueString(), nil)
 	if err != nil {
-		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to read pod resource: %s", err.Error()))
+		resp.Diagnostics.AddError("Podman client error", fmt.Sprintf("Failed to read (inspect) pod resource: %s", err.Error()))
 		return
 	}
 

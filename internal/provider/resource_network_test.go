@@ -8,15 +8,18 @@ import (
 )
 
 func TestAccResourceNetwork_basic(t *testing.T) {
+	name1 := generateResourceName()
+	name2 := generateResourceName()
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccResourceNetwork(testName("one")),
+				Config: testAccResourceNetwork(name1),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("podman_network.test", "name", testName("one")),
+					resource.TestCheckResourceAttr("podman_network.test", "name", name1),
 					resource.TestCheckResourceAttr("podman_network.test", "driver", "bridge"),
 					resource.TestCheckResourceAttr("podman_network.test", "internal", "false"),
 					resource.TestCheckResourceAttr("podman_network.test", "dns", "false"),
@@ -30,9 +33,9 @@ func TestAccResourceNetwork_basic(t *testing.T) {
 			},
 			// Update and Read testing
 			{
-				Config: testAccResourceNetwork(testName("two")),
+				Config: testAccResourceNetwork(name2),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("podman_network.test", "name", testName("two")),
+					resource.TestCheckResourceAttr("podman_network.test", "name", name2),
 					resource.TestCheckResourceAttr("podman_network.test", "driver", "bridge"),
 				),
 			},
@@ -42,15 +45,17 @@ func TestAccResourceNetwork_basic(t *testing.T) {
 }
 
 func TestAccResourceNetwork_dualStack(t *testing.T) {
+	name1 := generateResourceName()
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccResourceNetworkDualStack(testName("dual-1")),
+				Config: testAccResourceNetworkDualStack(name1),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("podman_network.dualstack", "name", testName("dual-1")),
+					resource.TestCheckResourceAttr("podman_network.dualstack", "name", name1),
 					resource.TestCheckResourceAttr("podman_network.dualstack", "driver", "bridge"),
 					resource.TestCheckResourceAttr("podman_network.dualstack", "internal", "false"),
 					resource.TestCheckResourceAttr("podman_network.dualstack", "dns", "true"),
@@ -77,9 +82,9 @@ func TestAccResourceNetwork_dualStack(t *testing.T) {
 			},
 			// Update and Read testing
 			{
-				Config: testAccResourceNetworkDualStack(testName("dual-1")),
+				Config: testAccResourceNetworkDualStack(name1),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("podman_network.dualstack", "name", testName("dual-1")),
+					resource.TestCheckResourceAttr("podman_network.dualstack", "name", name1),
 				),
 			},
 			// Delete testing automatically occurs in TestCase
@@ -87,15 +92,15 @@ func TestAccResourceNetwork_dualStack(t *testing.T) {
 	})
 }
 
-func testAccResourceNetwork(configurableAttribute string) string {
+func testAccResourceNetwork(name string) string {
 	return fmt.Sprintf(`
 resource "podman_network" "test" {
   name = %[1]q
 }
-`, configurableAttribute)
+`, name)
 }
 
-func testAccResourceNetworkDualStack(configurableAttribute string) string {
+func testAccResourceNetworkDualStack(name string) string {
 	return fmt.Sprintf(`
 	resource "podman_network" "dualstack" {
 		name        =  %[1]q
@@ -119,5 +124,5 @@ func testAccResourceNetworkDualStack(configurableAttribute string) string {
 			}
 		]
 	}
-`, configurableAttribute)
+`, name)
 }

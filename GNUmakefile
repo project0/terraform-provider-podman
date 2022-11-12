@@ -6,7 +6,7 @@ TF_ACC_TEST_PROVIDER_PODMAN_URI ?= $(TEST_DOCKER_COMPOSE)
 
 export PODMAN_VERSION ?= latest
 
-default: testacc
+default: testacc lint
 
 # Run acceptance tests (optional in rootless docker)
 .PHONY: testacc test

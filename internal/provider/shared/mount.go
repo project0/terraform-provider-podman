@@ -14,40 +14,57 @@ import (
 
 type (
 	Mounts []Mount
-	Mount  struct {
+
+	Mount struct {
 		Destination types.String `tfsdk:"destination"`
 
 		Volume *MountVolume `tfsdk:"volume"`
 		Bind   *MountBind   `tfsdk:"bind"`
-		//Tmpfs  *MountTmpfs
+		// Tmpfs  *MountTmpfs   `tfsdk:"tmpfs"`
 	}
 
-	//MountTmpfs struct{}
+	// MountVolume mounts a named volume
 	MountVolume struct {
 		Name types.String `tfsdk:"name"`
 
 		ReadOnly types.Bool `tfsdk:"read_only"`
-		Suid     types.Bool `tfsdk:"suid"`
-		Exec     types.Bool `tfsdk:"exec"`
-		Dev      types.Bool `tfsdk:"dev"`
 		Chown    types.Bool `tfsdk:"chown"`
-		IDmap    types.Bool `tfsdk:"idmap"`
+
+		Suid  types.Bool `tfsdk:"suid"`
+		Exec  types.Bool `tfsdk:"exec"`
+		Dev   types.Bool `tfsdk:"dev"`
+		IDmap types.Bool `tfsdk:"idmap"`
 	}
 
-	// aka host path
+	// MountBind mounts host path
 	MountBind struct {
 		Path types.String `tfsdk:"path"`
 
 		ReadOnly types.Bool `tfsdk:"read_only"`
-		Suid     types.Bool `tfsdk:"suid"`
-		Exec     types.Bool `tfsdk:"exec"`
-		Dev      types.Bool `tfsdk:"dev"`
 		Chown    types.Bool `tfsdk:"chown"`
-		IDmap    types.Bool `tfsdk:"idmap"`
+
+		Suid  types.Bool `tfsdk:"suid"`
+		Exec  types.Bool `tfsdk:"exec"`
+		Dev   types.Bool `tfsdk:"dev"`
+		IDmap types.Bool `tfsdk:"idmap"`
 
 		Propagation types.String `tfsdk:"propagation"`
 		Recursive   types.Bool   `tfsdk:"recursive"`
 		Relabel     types.Bool   `tfsdk:"relabel"`
+	}
+
+	// MountTmpfs mounts a tmpfs
+	MountTmpfs struct {
+		ReadOnly types.Bool `tfsdk:"read_only"`
+		Chown    types.Bool `tfsdk:"chown"`
+
+		Suid types.Bool `tfsdk:"suid"`
+		Exec types.Bool `tfsdk:"exec"`
+		Dev  types.Bool `tfsdk:"dev"`
+
+		Size      types.String `tfsdk:"size"`
+		Mode      types.String `tfsdk:"mode"`
+		TmpCopyUp types.Bool   `tfsdk:"tmpcopyup"`
 	}
 )
 
@@ -57,7 +74,7 @@ func (m Mounts) AttributeSchema() tfsdk.Attribute {
 		Description: "Mounts volume, bind, image, tmpfs, etc..",
 		Required:    false,
 		Optional:    true,
-		Computed:    false,
+		Computed:    true,
 		// TODO/IDEA: Change SetNested to MapNested and use key as destination?
 		Attributes: tfsdk.SetNestedAttributes(
 			map[string]tfsdk.Attribute{
@@ -77,7 +94,7 @@ func (m Mounts) AttributeSchema() tfsdk.Attribute {
 				"volume": {
 					Description: "Named Volume",
 					Optional:    true,
-					Computed:    true,
+					Computed:    false,
 					Attributes: tfsdk.SingleNestedAttributes(
 						map[string]tfsdk.Attribute{
 							"name": {
@@ -87,6 +104,9 @@ func (m Mounts) AttributeSchema() tfsdk.Attribute {
 								Type:        types.StringType,
 								Validators: []tfsdk.AttributeValidator{
 									validator.MatchName(),
+								},
+								PlanModifiers: tfsdk.AttributePlanModifiers{
+									resource.RequiresReplace(),
 								},
 							},
 							"read_only": m.attributeSchemaReadOnly(),
@@ -102,9 +122,9 @@ func (m Mounts) AttributeSchema() tfsdk.Attribute {
 					},
 				},
 				"bind": {
-					Description: "Named Volume",
+					Description: "Bind Volume",
 					Optional:    true,
-					Computed:    true,
+					Computed:    false,
 					Attributes: tfsdk.SingleNestedAttributes(
 						map[string]tfsdk.Attribute{
 							"path": {
@@ -115,6 +135,9 @@ func (m Mounts) AttributeSchema() tfsdk.Attribute {
 								Validators:  []tfsdk.AttributeValidator{
 									//TODO
 								},
+								PlanModifiers: tfsdk.AttributePlanModifiers{
+									resource.RequiresReplace(),
+								},
 							},
 							"read_only":   m.attributeSchemaReadOnly(),
 							"dev":         m.attributeSchemaDev(),
@@ -124,13 +147,31 @@ func (m Mounts) AttributeSchema() tfsdk.Attribute {
 							"idmap":       m.attributeSchemaIDmap(),
 							"propagation": m.attributeSchemaBindPropagation(),
 							"recursive":   m.attributeSchemaBindRecursive(),
-							"relabel":     m.attributeSchemaRelabel(),
+							"relabel":     m.attributeSchemaBindRelabel(),
 						},
 					),
-					PlanModifiers: tfsdk.AttributePlanModifiers{
-						resource.UseStateForUnknown(),
-					},
 				},
+				// TODO:
+				// While its technically possible, the podman api does not support this case for pods pretty well.
+				// The tmpfs mount will be created on the infra container, but it is not exposed on inspect anymore
+				// https://github.com/containers/podman/blob/v4.3.1/libpod/container_inspect.go#L276-L280
+				//				"tmpfs": {
+				//					Description: "Tmpfs Volume",
+				//					Optional:    true,
+				//					Computed:    false,
+				//					Attributes: tfsdk.SingleNestedAttributes(
+				//						map[string]tfsdk.Attribute{
+				//							"read_only": m.attributeSchemaReadOnly(),
+				//							"dev":       m.attributeSchemaDev(),
+				//							"exec":      m.attributeSchemaExec(),
+				//							"suid":      m.attributeSchemaSuid(),
+				//							"chown":     m.attributeSchemaChown(),
+				//							"size":      m.attributeSchemaTmpfsSize(),
+				//							"mode":      m.attributeSchemaTmpfsMode(),
+				//							"tmpcopyup": m.attributeSchemaTmpfsTmpCopyUp(),
+				//						},
+				//					),
+				//				},
 			},
 		),
 		PlanModifiers: tfsdk.AttributePlanModifiers{
@@ -145,7 +186,6 @@ func (m Mounts) ToPodmanSpec(diags *diag.Diagnostics) ([]*specgen.NamedVolume, [
 
 	specNamedVolumes := make([]*specgen.NamedVolume, 0)
 	specMounts := make([]specs.Mount, 0)
-
 	for _, mount := range m {
 		if mount.Volume != nil {
 			// Named volume mount options
@@ -182,15 +222,15 @@ func (m Mounts) ToPodmanSpec(diags *diag.Diagnostics) ([]*specgen.NamedVolume, [
 			specMount.Options = appendMountOptBool(specMount.Options, mount.Bind.Exec, "exec", "noexec")
 			specMount.Options = appendMountOptBool(specMount.Options, mount.Bind.Suid, "suid", "nosuid")
 
-			if !mount.Bind.Chown.IsNull() && mount.Bind.Chown.ValueBool() {
+			if mount.Bind.Chown.ValueBool() {
 				specMount.Options = append(specMount.Options, "U")
 			}
 
-			if !mount.Bind.IDmap.IsNull() && mount.Bind.IDmap.ValueBool() {
+			if mount.Bind.IDmap.ValueBool() {
 				specMount.Options = append(specMount.Options, "idmap")
 			}
 
-			if !mount.Bind.Propagation.IsNull() && mount.Bind.Propagation.ValueString() != "" {
+			if mount.Bind.Propagation.ValueString() != "" {
 				specMount.Options = append(specMount.Options, mount.Bind.Propagation.ValueString())
 			}
 			specMount.Options = appendMountOptBool(specMount.Options, mount.Bind.Recursive, "rbind", "bind")
@@ -199,6 +239,25 @@ func (m Mounts) ToPodmanSpec(diags *diag.Diagnostics) ([]*specgen.NamedVolume, [
 
 			specMounts = append(specMounts, specMount)
 		}
+		// else if mount.Tmpfs != nil {
+		//
+		// 			// Tmpfs mount options
+		// 			specMount := specs.Mount{
+		// 				Destination: mount.Destination.ValueString(),
+		// 				Type:        "tmpfs",
+		// 			}
+		//
+		// 			specMount.Options = appendMountOptBool(specMount.Options, mount.Tmpfs.ReadOnly, "ro", "rw")
+		// 			specMount.Options = appendMountOptBool(specMount.Options, mount.Tmpfs.Dev, "dev", "nodev")
+		// 			specMount.Options = appendMountOptBool(specMount.Options, mount.Tmpfs.Exec, "exec", "noexec")
+		// 			specMount.Options = appendMountOptBool(specMount.Options, mount.Tmpfs.Suid, "suid", "nosuid")
+		//
+		// 			if mount.Tmpfs.Chown.ValueBool() {
+		// 				specMount.Options = append(specMount.Options, "U")
+		// 			}
+		//
+		// 			specMounts = append(specMounts, specMount)
+		// 		}
 	}
 	return specNamedVolumes, specMounts
 }
@@ -207,9 +266,10 @@ func FromPodmanToMounts(diags *diag.Diagnostics, specMounts []define.InspectMoun
 	mounts := make(Mounts, 0)
 
 	for _, specMount := range specMounts {
-
 		opts := parseMountOptions(diags, specMount.Options)
-		readOnly := types.Bool{Value: !specMount.RW}
+		if opts.readOnly.IsNull() {
+			opts.readOnly = types.BoolValue(!specMount.RW)
+		}
 
 		switch specMount.Type {
 		case "volume":
@@ -217,7 +277,7 @@ func FromPodmanToMounts(diags *diag.Diagnostics, specMounts []define.InspectMoun
 				Destination: types.String{Value: specMount.Destination},
 				Volume: &MountVolume{
 					Name:     types.String{Value: specMount.Name},
-					ReadOnly: readOnly,
+					ReadOnly: opts.readOnly,
 					Dev:      opts.dev,
 					Exec:     opts.exec,
 					Suid:     opts.suid,
@@ -225,12 +285,13 @@ func FromPodmanToMounts(diags *diag.Diagnostics, specMounts []define.InspectMoun
 					IDmap:    opts.idmap,
 				},
 			})
+
 		case "bind":
 			mounts = append(mounts, Mount{
 				Destination: types.String{Value: specMount.Destination},
 				Bind: &MountBind{
 					Path:        types.String{Value: specMount.Source},
-					ReadOnly:    readOnly,
+					ReadOnly:    opts.readOnly,
 					Dev:         opts.dev,
 					Exec:        opts.exec,
 					Suid:        opts.suid,
@@ -241,6 +302,20 @@ func FromPodmanToMounts(diags *diag.Diagnostics, specMounts []define.InspectMoun
 					Relabel:     opts.relabel,
 				},
 			})
+
+			//		case "tmpfs":
+			//			mounts = append(mounts, Mount{
+			//				Destination: types.String{Value: specMount.Destination},
+			//				Tmpfs: &MountTmpfs{
+			//					ReadOnly: opts.readOnly,
+			//					Dev:      opts.dev,
+			//					Exec:     opts.exec,
+			//					Suid:     opts.suid,
+			//					Chown:    opts.chown,
+			//					Size:     opts.size,
+			//				},
+			//			})
+
 		default:
 			diags.AddError("Unknown mount type retrieved", specMount.Type)
 		}

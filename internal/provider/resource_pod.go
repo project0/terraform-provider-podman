@@ -119,23 +119,26 @@ func toPodmanPodSpecGenerator(ctx context.Context, d podResourceData, diags *dia
 		Name:         d.Name.ValueString(),
 		CgroupParent: d.CgroupParent.ValueString(),
 		Hostname:     d.Hostname.ValueString(),
+		Infra:        true,
 	}
 
 	diags.Append(d.Labels.ElementsAs(ctx, &p.Labels, true)...)
 	sp, err := entities.ToPodSpecGen(*s, p)
-
+	if err != nil {
+		diags.AddError("Invalid pod configuration", fmt.Sprintf("Cannot build pod configuration: %q", err.Error()))
+	}
 	// add storage
 	sp.Volumes, sp.Mounts = d.Mounts.ToPodmanSpec(diags)
-
-	if err != nil {
+	if err := sp.Validate(); err != nil {
 		diags.AddError("Invalid pod configuration", fmt.Sprintf("Cannot build pod configuration: %q", err.Error()))
 	}
 	return sp
 }
 
 func fromPodResponse(p *entities.PodInspectReport, diags *diag.Diagnostics) *podResourceData {
+
 	d := &podResourceData{
-		ID:           types.String{Value: p.Name},
+		ID:           types.String{Value: p.ID},
 		Name:         types.String{Value: p.Name},
 		Labels:       utils.MapStringToMapType(p.Labels),
 		Mounts:       shared.FromPodmanToMounts(diags, p.Mounts),
