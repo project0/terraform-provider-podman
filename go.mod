@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/containers/common v0.50.1
-	github.com/containers/podman/v4 v4.3.0
+	github.com/containers/podman/v4 v4.3.1
 	github.com/hashicorp/terraform-plugin-docs v0.13.0
 	github.com/hashicorp/terraform-plugin-framework v0.15.0
 	github.com/hashicorp/terraform-plugin-go v0.14.1
@@ -35,7 +35,7 @@ require (
 	github.com/containerd/containerd v1.6.8 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.12.0 // indirect
 	github.com/containers/buildah v1.28.0 // indirect
-	github.com/containers/image/v5 v5.23.0 // indirect
+	github.com/containers/image/v5 v5.23.1 // indirect
 	github.com/containers/libtrust v0.0.0-20200511145503-9c3a6c22cd9a // indirect
 	github.com/containers/ocicrypt v1.1.6 // indirect
 	github.com/containers/psgo v1.7.3 // indirect
