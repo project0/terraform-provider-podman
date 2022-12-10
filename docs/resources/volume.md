@@ -3,12 +3,12 @@
 page_title: "podman_volume Resource - terraform-provider-podman"
 subcategory: ""
 description: |-
-  Manage pods for containers
+  Manage volumes for containers and pods
 ---
 
 # podman_volume (Resource)
 
-Manage pods for containers
+Manage volumes for containers and pods
 
 ## Example Usage
 
