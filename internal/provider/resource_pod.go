@@ -8,7 +8,9 @@ import (
 	"github.com/containers/podman/v4/pkg/specgen"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/project0/terraform-provider-podman/internal/modifier"
 	"github.com/project0/terraform-provider-podman/internal/provider/shared"
@@ -34,6 +36,7 @@ type (
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &podResource{}
+	_ resource.ResourceWithSchema      = &podResource{}
 	_ resource.ResourceWithConfigure   = &podResource{}
 	_ resource.ResourceWithImportState = &podResource{}
 )
@@ -53,64 +56,41 @@ func (r podResource) Metadata(_ context.Context, req resource.MetadataRequest, r
 	resp.TypeName = req.ProviderTypeName + "_pod"
 }
 
-// GetSchema returns the resource schema.
-func (r podResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+// Schema returns the resource schema.
+func (r podResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	mountsAttr := make(shared.Mounts, 0)
-	return tfsdk.Schema{
-		// This description is used by the documentation generator and the language server.
+	resp.Schema = schema.Schema{
 		Description: "Manage pods for containers",
-		Attributes: withGenericAttributes(map[string]tfsdk.Attribute{
-			"cgroup_parent": {
-				MarkdownDescription: "Path to cgroups under which the cgroup for the pod will be created. " +
-					"If the path is not absolute, the path is considered to be relative to the cgroups path of the init process. " +
-					"Cgroups will be created if they do not already exist.",
-				Required: false,
-				Optional: true,
-				Computed: true,
-				Type:     types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.UseStateForUnknown(),
-					modifier.RequiresReplaceComputed(),
+		Attributes: withGenericAttributes(
+			map[string]schema.Attribute{
+				"cgroup_parent": schema.StringAttribute{
+					MarkdownDescription: "Path to cgroups under which the cgroup for the pod will be created. " +
+						"If the path is not absolute, the path is considered to be relative to the cgroups path of the init process. " +
+						"Cgroups will be created if they do not already exist.",
+					Required: false,
+					Optional: true,
+					Computed: true,
+					PlanModifiers: []planmodifier.String{
+						stringplanmodifier.UseStateForUnknown(),
+						modifier.RequiresReplaceComputed(),
+					},
 				},
-			},
-
-			"hostname": {
-				Description: "Hostname is the pod's hostname. " +
-					"If not set, the name of the pod will be used (if a name was not provided here, the name auto-generated for the pod will be used). " +
-					"This will be used by the infra container and all containers in the pod as long as the UTS namespace is shared.",
-				Required: false,
-				Optional: true,
-				Computed: false,
-				Type:     types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.UseStateForUnknown(),
-					resource.RequiresReplace(),
+				"hostname": schema.StringAttribute{
+					Description: "Hostname is the pod's hostname. " +
+						"If not set, the name of the pod will be used (if a name was not provided here, the name auto-generated for the pod will be used). " +
+						"This will be used by the infra container and all containers in the pod as long as the UTS namespace is shared.",
+					Required: false,
+					Optional: true,
+					Computed: false,
+					PlanModifiers: []planmodifier.String{
+						stringplanmodifier.UseStateForUnknown(),
+						stringplanmodifier.RequiresReplace(),
+					},
 				},
+				"mounts": mountsAttr.GetSchema(ctx),
 			},
-
-			"mounts": mountsAttr.AttributeSchema(),
-
-			// infra container settings
-			/*			"infra": {
-							Description: "Infra tells the pod to create an infra container or not. " +
-								"If this is false, many networking-related options will become unavailabl. Defaults to true.",
-							Required: false,
-							Optional: true,
-							Computed: true,
-							Type:     types.BoolType,
-							PlanModifiers: tfsdk.AttributePlanModifiers{
-								resource.UseStateForUnknown(),
-								resource.RequiresReplace(),
-							},
-						},
-
-						"infra_command":         {},
-						"infra_conmon_pid_file": {},
-						"infra_image":           {},
-						"infra_name":            {},
-			*/
-		}),
-	}, nil
+		),
+	}
 }
 
 func toPodmanPodSpecGenerator(ctx context.Context, d podResourceData, diags *diag.Diagnostics) *specgen.PodSpecGenerator {
@@ -136,14 +116,18 @@ func toPodmanPodSpecGenerator(ctx context.Context, d podResourceData, diags *dia
 }
 
 func fromPodResponse(p *entities.PodInspectReport, diags *diag.Diagnostics) *podResourceData {
+	hostname := types.StringNull()
+	if p.Hostname != "" {
+		hostname = types.StringValue(p.Hostname)
+	}
 
 	d := &podResourceData{
-		ID:           types.String{Value: p.ID},
-		Name:         types.String{Value: p.Name},
-		Labels:       utils.MapStringToMapType(p.Labels),
+		ID:           types.StringValue(p.ID),
+		Name:         types.StringValue(p.Name),
+		Labels:       utils.MapStringToMapType(p.Labels, diags),
 		Mounts:       shared.FromPodmanToMounts(diags, p.Mounts),
-		CgroupParent: types.String{Value: p.CgroupParent},
-		Hostname:     types.String{Value: p.Hostname, Null: p.Hostname == ""},
+		CgroupParent: types.StringValue(p.CgroupParent),
+		Hostname:     hostname,
 	}
 
 	return d

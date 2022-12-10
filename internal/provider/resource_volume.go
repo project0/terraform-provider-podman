@@ -6,7 +6,8 @@ import (
 	"github.com/containers/podman/v4/pkg/domain/entities"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/project0/terraform-provider-podman/internal/modifier"
 	"github.com/project0/terraform-provider-podman/internal/utils"
@@ -48,48 +49,44 @@ func (r volumeResource) Metadata(_ context.Context, req resource.MetadataRequest
 	resp.TypeName = req.ProviderTypeName + "_volume"
 }
 
-// GetSchema returns the resource schema.
-func (t volumeResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
-		// This description is used by the documentation generator and the language server.
+// Schema returns the resource schema.
+func (r volumeResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: "Manage volumes for containers and pods",
-		Attributes: withGenericAttributes(map[string]tfsdk.Attribute{
-			"driver": {
-				MarkdownDescription: "Name of the volume driver. Defaults by podman to `local`.",
-				Required:            false,
-				Optional:            true,
-				Computed:            true,
-				Type:                types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					modifier.RequiresReplaceComputed(),
+		Attributes: withGenericAttributes(
+			map[string]schema.Attribute{
+				"driver": schema.StringAttribute{
+					MarkdownDescription: "Name of the volume driver. Defaults by podman to `local`.",
+					Required:            false,
+					Optional:            true,
+					Computed:            true,
+					PlanModifiers: []planmodifier.String{
+						modifier.RequiresReplaceComputed(),
+					},
+				},
+				"options": schema.MapAttribute{
+					Description: "Driver specific options.",
+					Required:    false,
+					Optional:    true,
+					Computed:    true,
+					ElementType: types.StringType,
+					PlanModifiers: []planmodifier.Map{
+						modifier.UseDefaultModifier(utils.MapStringEmpty()),
+						modifier.RequiresReplaceComputed(),
+					},
 				},
 			},
-			"options": {
-				Description: "Driver specific options.",
-				Required:    false,
-				Optional:    true,
-				Computed:    true,
-				Type: types.MapType{
-					ElemType: types.StringType,
-				},
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					modifier.UseDefaultModifier(types.Map{ElemType: types.StringType, Null: false}),
-					modifier.RequiresReplaceComputed(),
-				},
-			},
-		}),
-
-		Blocks: map[string]tfsdk.Block{},
-	}, nil
+		),
+	}
 }
 
 func fromVolumeResponse(v *entities.VolumeConfigResponse, diags *diag.Diagnostics) *volumeResourceData {
 	return &volumeResourceData{
 		// volumes do not have IDs, it wilbe mapped to the unique name
-		ID:      types.String{Value: v.Name},
-		Name:    types.String{Value: v.Name},
-		Driver:  types.String{Value: v.Driver},
-		Labels:  utils.MapStringToMapType(v.Labels),
-		Options: utils.MapStringToMapType(v.Options),
+		ID:      types.StringValue(v.Name),
+		Name:    types.StringValue(v.Name),
+		Driver:  types.StringValue(v.Driver),
+		Labels:  utils.MapStringToMapType(v.Labels, diags),
+		Options: utils.MapStringToMapType(v.Options, diags),
 	}
 }

@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/project0/terraform-provider-podman/internal/modifier"
-	"github.com/project0/terraform-provider-podman/internal/validator"
 )
 
 const (
@@ -36,132 +38,123 @@ var (
 	}
 )
 
-func (m Mounts) attributeSchemaReadOnly() tfsdk.Attribute {
-	return tfsdk.Attribute{
+func (m Mounts) attributeSchemaReadOnly() schema.Attribute {
+	return schema.BoolAttribute{
 		Description: "Mount as read only. Default depends on the mount type.",
 		Computed:    true,
 		Optional:    true,
-		Type:        types.BoolType,
-		PlanModifiers: tfsdk.AttributePlanModifiers{
+		PlanModifiers: []planmodifier.Bool{
 			modifier.AlwaysUseStateForUnknown(),
 			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
 
-func (m Mounts) attributeSchemaSuid() tfsdk.Attribute {
-	return tfsdk.Attribute{
+func (m Mounts) attributeSchemaSuid() schema.Attribute {
+	return schema.BoolAttribute{
 		Description: "Mounting the volume with the nosuid(false) options means that SUID applications on the volume will not be able to change their privilege." +
 			"By default volumes are mounted with nosuid.",
 		Computed: true,
 		Optional: true,
-		Type:     types.BoolType,
-		PlanModifiers: tfsdk.AttributePlanModifiers{
+		PlanModifiers: []planmodifier.Bool{
 			modifier.AlwaysUseStateForUnknown(),
 			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
 
-func (m Mounts) attributeSchemaExec() tfsdk.Attribute {
-	return tfsdk.Attribute{
+func (m Mounts) attributeSchemaExec() schema.Attribute {
+	return schema.BoolAttribute{
 		Description: "Mounting the volume with the noexec(false) option means that no executables on the volume will be able to executed within the pod." +
 			"Defaults depends on the mount type or storage driver.",
 		Computed: true,
 		Optional: true,
-		Type:     types.BoolType,
-		PlanModifiers: tfsdk.AttributePlanModifiers{
+		PlanModifiers: []planmodifier.Bool{
 			modifier.AlwaysUseStateForUnknown(),
 			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
 
-func (m Mounts) attributeSchemaDev() tfsdk.Attribute {
-	return tfsdk.Attribute{
+func (m Mounts) attributeSchemaDev() schema.Attribute {
+	return schema.BoolAttribute{
 		Description: "Mounting the volume with the nodev(false) option means that no devices on the volume will be able to be used by processes within the container." +
 			"By default volumes are mounted with nodev.",
 		Computed: true,
 		Optional: true,
-		Type:     types.BoolType,
-		PlanModifiers: tfsdk.AttributePlanModifiers{
+		PlanModifiers: []planmodifier.Bool{
 			modifier.AlwaysUseStateForUnknown(),
 			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
 
-func (m Mounts) attributeSchemaChown() tfsdk.Attribute {
-	return tfsdk.Attribute{
+func (m Mounts) attributeSchemaChown() schema.Attribute {
+	return schema.BoolAttribute{
 		Description: "Change recursively the owner and group of the source volume based on the UID and GID of the container.",
 		Computed:    true,
 		Optional:    true,
-		Type:        types.BoolType,
-		PlanModifiers: tfsdk.AttributePlanModifiers{
+		PlanModifiers: []planmodifier.Bool{
 			modifier.AlwaysUseStateForUnknown(),
 			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
 
-func (m Mounts) attributeSchemaIDmap() tfsdk.Attribute {
-	return tfsdk.Attribute{
+func (m Mounts) attributeSchemaIDmap() schema.Attribute {
+	return schema.BoolAttribute{
 		Description: "If specified, create an idmapped mount to the target user namespace in the container.",
 		Computed:    true,
 		Optional:    true,
-		Type:        types.BoolType,
-		PlanModifiers: tfsdk.AttributePlanModifiers{
+		PlanModifiers: []planmodifier.Bool{
 			modifier.AlwaysUseStateForUnknown(),
 			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
 
-func (m Mounts) attributeSchemaBindPropagation() tfsdk.Attribute {
-	return tfsdk.Attribute{
+func (m Mounts) attributeSchemaBindPropagation() schema.Attribute {
+	return schema.StringAttribute{
 		Description: fmt.Sprintf("One of %s.", strings.Join(bindPropagations, ",")),
 		Computed:    true,
 		Optional:    true,
-		Type:        types.StringType,
-		Validators: []tfsdk.AttributeValidator{
-			validator.OneOf(bindPropagations...),
+		Validators: []validator.String{
+			stringvalidator.OneOf(bindPropagations...),
 		},
-		PlanModifiers: tfsdk.AttributePlanModifiers{
+		PlanModifiers: []planmodifier.String{
 			modifier.AlwaysUseStateForUnknown(),
 			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
 
-func (m Mounts) attributeSchemaBindRecursive() tfsdk.Attribute {
-	return tfsdk.Attribute{
+func (m Mounts) attributeSchemaBindRecursive() schema.Attribute {
+	return schema.BoolAttribute{
 		Description: "Set up a recursive bind mount. By default it is recursive.",
 		Computed:    true,
 		Optional:    true,
-		Type:        types.BoolType,
-		PlanModifiers: tfsdk.AttributePlanModifiers{
+		PlanModifiers: []planmodifier.Bool{
 			modifier.AlwaysUseStateForUnknown(),
 			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
 
-func (m Mounts) attributeSchemaBindRelabel() tfsdk.Attribute {
-	return tfsdk.Attribute{
+func (m Mounts) attributeSchemaBindRelabel() schema.Attribute {
+	return schema.BoolAttribute{
 		Description: "Labels the volume mounts. Sets the z (true) flag label the content with a shared content label, " +
 			"or Z (false) flag to label the content with a private unshared label. " +
 			"Default is unset (null).",
 		Computed: true,
 		Optional: true,
-		Type:     types.BoolType,
-		PlanModifiers: tfsdk.AttributePlanModifiers{
+		PlanModifiers: []planmodifier.Bool{
 			modifier.AlwaysUseStateForUnknown(),
 			modifier.RequiresReplaceComputed(),
 		},
 	}
 }
 
-// func (m Mounts) attributeSchemaTmpfsSize() tfsdk.Attribute {
+// func (m Mounts) attributeSchemaTmpfsSize() schema.Attribute{
 // 	return tfsdk.Attribute{
 // 		Description: "Size of the tmpfs mount in bytes or units. Unlimited by default in Linux.",
 // 		Computed:    true,
@@ -177,7 +170,7 @@ func (m Mounts) attributeSchemaBindRelabel() tfsdk.Attribute {
 // 	}
 // }
 //
-// func (m Mounts) attributeSchemaTmpfsMode() tfsdk.Attribute {
+// func (m Mounts) attributeSchemaTmpfsMode() schema.Attribute{
 // 	return tfsdk.Attribute{
 // 		Description: "File mode of the tmpfs in octal (e.g. 700 or 0700). Defaults to 1777 in Linux.",
 // 		Computed:    true,
@@ -193,7 +186,7 @@ func (m Mounts) attributeSchemaBindRelabel() tfsdk.Attribute {
 // 	}
 // }
 //
-// func (m Mounts) attributeSchemaTmpfsTmpCopyUp() tfsdk.Attribute {
+// func (m Mounts) attributeSchemaTmpfsTmpCopyUp() schema.Attribute{
 // 	return tfsdk.Attribute{
 // 		Description: "Enable copyup from the image directory at the same location to the tmpfs. Used by default.",
 // 		Computed:    true,

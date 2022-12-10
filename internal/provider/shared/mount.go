@@ -1,15 +1,23 @@
 package shared
 
 import (
+	"context"
+
 	"github.com/containers/podman/v4/libpod/define"
 	"github.com/containers/podman/v4/pkg/specgen"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/project0/terraform-provider-podman/internal/modifier"
+	"github.com/project0/terraform-provider-podman/internal/validators"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/project0/terraform-provider-podman/internal/validator"
 )
 
 type (
@@ -68,116 +76,118 @@ type (
 	}
 )
 
-func (m Mounts) AttributeSchema() tfsdk.Attribute {
-
-	return tfsdk.Attribute{
+func (m Mounts) GetSchema(ctx context.Context) schema.Attribute {
+	return schema.SetNestedAttribute{
 		Description: "Mounts volume, bind, image, tmpfs, etc..",
 		Required:    false,
 		Optional:    true,
 		Computed:    true,
-		// TODO/IDEA: Change SetNested to MapNested and use key as destination?
-		Attributes: tfsdk.SetNestedAttributes(
-			map[string]tfsdk.Attribute{
-				"destination": {
+		PlanModifiers: []planmodifier.Set{
+			modifier.RequiresReplaceComputed(),
+		},
+		NestedObject: schema.NestedAttributeObject{
+			Attributes: map[string]schema.Attribute{
+				"destination": schema.StringAttribute{
 					Description: "Target path",
 					Required:    true,
 					Computed:    false,
-					Type:        types.StringType,
-					Validators:  []tfsdk.AttributeValidator{
+					Validators:  []validator.String{
 						//TODO
 					},
-					PlanModifiers: tfsdk.AttributePlanModifiers{
-						resource.RequiresReplace(),
-					},
 				},
-				// TODO validate conflicts with
-				"volume": {
+				"volume": schema.SingleNestedAttribute{
 					Description: "Named Volume",
 					Optional:    true,
 					Computed:    false,
-					Attributes: tfsdk.SingleNestedAttributes(
-						map[string]tfsdk.Attribute{
-							"name": {
-								Description: "Name of the volume",
-								Required:    true,
-								Computed:    false,
-								Type:        types.StringType,
-								Validators: []tfsdk.AttributeValidator{
-									validator.MatchName(),
-								},
-								PlanModifiers: tfsdk.AttributePlanModifiers{
-									resource.RequiresReplace(),
-								},
+					Validators: []validator.Object{
+						objectvalidator.ConflictsWith(
+							path.MatchRelative().AtParent().AtName("bind"),
+						),
+					},
+					PlanModifiers: []planmodifier.Object{
+						objectplanmodifier.RequiresReplace(),
+					},
+					Attributes: map[string]schema.Attribute{
+						"name": schema.StringAttribute{
+							Description: "Name of the volume",
+							Required:    true,
+							Computed:    false,
+							Validators: []validator.String{
+								validators.MatchName(),
 							},
-							"read_only": m.attributeSchemaReadOnly(),
-							"dev":       m.attributeSchemaDev(),
-							"exec":      m.attributeSchemaExec(),
-							"suid":      m.attributeSchemaSuid(),
-							"chown":     m.attributeSchemaChown(),
-							"idmap":     m.attributeSchemaIDmap(),
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
 						},
-					),
-					PlanModifiers: tfsdk.AttributePlanModifiers{
-						resource.RequiresReplace(),
+						"read_only": m.attributeSchemaReadOnly(),
+						"dev":       m.attributeSchemaDev(),
+						"exec":      m.attributeSchemaExec(),
+						"suid":      m.attributeSchemaSuid(),
+						"chown":     m.attributeSchemaChown(),
+						"idmap":     m.attributeSchemaIDmap(),
 					},
 				},
-				"bind": {
+
+				"bind": schema.SingleNestedAttribute{
 					Description: "Bind Volume",
 					Optional:    true,
 					Computed:    false,
-					Attributes: tfsdk.SingleNestedAttributes(
-						map[string]tfsdk.Attribute{
-							"path": {
-								Description: "Host path",
-								Required:    true,
-								Computed:    false,
-								Type:        types.StringType,
-								Validators:  []tfsdk.AttributeValidator{
-									//TODO
-								},
-								PlanModifiers: tfsdk.AttributePlanModifiers{
-									resource.RequiresReplace(),
-								},
+					Validators: []validator.Object{
+						objectvalidator.ConflictsWith(
+							path.MatchRelative().AtParent().AtName("volume"),
+						),
+					},
+					PlanModifiers: []planmodifier.Object{
+						objectplanmodifier.RequiresReplace(),
+					},
+					Attributes: map[string]schema.Attribute{
+						"path": schema.StringAttribute{
+							Description: "Host path",
+							Required:    true,
+							Computed:    false,
+							Validators:  []validator.String{
+								// TODO
 							},
-							"read_only":   m.attributeSchemaReadOnly(),
-							"dev":         m.attributeSchemaDev(),
-							"exec":        m.attributeSchemaExec(),
-							"suid":        m.attributeSchemaSuid(),
-							"chown":       m.attributeSchemaChown(),
-							"idmap":       m.attributeSchemaIDmap(),
-							"propagation": m.attributeSchemaBindPropagation(),
-							"recursive":   m.attributeSchemaBindRecursive(),
-							"relabel":     m.attributeSchemaBindRelabel(),
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
 						},
-					),
+						"read_only":   m.attributeSchemaReadOnly(),
+						"dev":         m.attributeSchemaDev(),
+						"exec":        m.attributeSchemaExec(),
+						"suid":        m.attributeSchemaSuid(),
+						"chown":       m.attributeSchemaChown(),
+						"idmap":       m.attributeSchemaIDmap(),
+						"propagation": m.attributeSchemaBindPropagation(),
+						"recursive":   m.attributeSchemaBindRecursive(),
+						"relabel":     m.attributeSchemaBindRelabel(),
+					},
 				},
-				// TODO:
-				// While its technically possible, the podman api does not support this case for pods pretty well.
-				// The tmpfs mount will be created on the infra container, but it is not exposed on inspect anymore
-				// https://github.com/containers/podman/blob/v4.3.1/libpod/container_inspect.go#L276-L280
-				//				"tmpfs": {
-				//					Description: "Tmpfs Volume",
-				//					Optional:    true,
-				//					Computed:    false,
-				//					Attributes: tfsdk.SingleNestedAttributes(
-				//						map[string]tfsdk.Attribute{
-				//							"read_only": m.attributeSchemaReadOnly(),
-				//							"dev":       m.attributeSchemaDev(),
-				//							"exec":      m.attributeSchemaExec(),
-				//							"suid":      m.attributeSchemaSuid(),
-				//							"chown":     m.attributeSchemaChown(),
-				//							"size":      m.attributeSchemaTmpfsSize(),
-				//							"mode":      m.attributeSchemaTmpfsMode(),
-				//							"tmpcopyup": m.attributeSchemaTmpfsTmpCopyUp(),
-				//						},
-				//					),
-				//				},
 			},
-		),
-		PlanModifiers: tfsdk.AttributePlanModifiers{
-			resource.RequiresReplace(),
 		},
 	}
+
+	// TODO:
+	// While its technically possible, the podman api does not support this case for pods pretty well.
+	// The tmpfs mount will be created on the infra container, but it is not exposed on inspect anymore
+	// https://github.com/containers/podman/blob/v4.3.1/libpod/container_inspect.go#L276-L280
+	//				"tmpfs": {
+	//					Description: "Tmpfs Volume",
+	//					Optional:    true,
+	//					Computed:    false,
+	//					Attributes: tfsdk.SingleNestedAttributes(
+	//						map[string]tfsdk.Attribute{
+	//							"read_only": m.attributeSchemaReadOnly(),
+	//							"dev":       m.attributeSchemaDev(),
+	//							"exec":      m.attributeSchemaExec(),
+	//							"suid":      m.attributeSchemaSuid(),
+	//							"chown":     m.attributeSchemaChown(),
+	//							"size":      m.attributeSchemaTmpfsSize(),
+	//							"mode":      m.attributeSchemaTmpfsMode(),
+	//							"tmpcopyup": m.attributeSchemaTmpfsTmpCopyUp(),
+	//						},
+	//					),
+	//				},
 
 }
 
@@ -274,9 +284,9 @@ func FromPodmanToMounts(diags *diag.Diagnostics, specMounts []define.InspectMoun
 		switch specMount.Type {
 		case "volume":
 			mounts = append(mounts, Mount{
-				Destination: types.String{Value: specMount.Destination},
+				Destination: types.StringValue(specMount.Destination),
 				Volume: &MountVolume{
-					Name:     types.String{Value: specMount.Name},
+					Name:     types.StringValue(specMount.Name),
 					ReadOnly: opts.readOnly,
 					Dev:      opts.dev,
 					Exec:     opts.exec,
@@ -288,9 +298,9 @@ func FromPodmanToMounts(diags *diag.Diagnostics, specMounts []define.InspectMoun
 
 		case "bind":
 			mounts = append(mounts, Mount{
-				Destination: types.String{Value: specMount.Destination},
+				Destination: types.StringValue(specMount.Destination),
 				Bind: &MountBind{
-					Path:        types.String{Value: specMount.Source},
+					Path:        types.StringValue(specMount.Source),
 					ReadOnly:    opts.readOnly,
 					Dev:         opts.dev,
 					Exec:        opts.exec,
