@@ -1,14 +1,13 @@
-package validator
+package validators
 
 import (
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func testStringToVals(str ...string) []attr.Value {
-	vals := make([]attr.Value, len(str))
+func testStringToVals(str ...string) []types.String {
+	vals := make([]types.String, len(str))
 	for i := 0; i < len(str); i++ {
 		vals[i] = types.StringValue(str[i])
 	}
@@ -16,10 +15,10 @@ func testStringToVals(str ...string) []attr.Value {
 }
 
 func TestStringValidator_Octal(t *testing.T) {
-	tests := []testValidatorCase{
+	tests := []testValidatorStringCase{
 		{
 			desc: "Null and Unknown is valid",
-			values: []attr.Value{
+			values: []types.String{
 				types.StringUnknown(),
 				types.StringNull(),
 			},
@@ -54,14 +53,14 @@ func TestStringValidator_Octal(t *testing.T) {
 			validator: MatchOctal(),
 		},
 	}
-	testValidatorExecute(t, tests)
+	testValidatorStringExecute(t, tests)
 }
 
 func TestStringValidator_TmpfSize(t *testing.T) {
-	tests := []testValidatorCase{
+	tests := []testValidatorStringCase{
 		{
 			desc: "Null and Unknown is valid",
-			values: []attr.Value{
+			values: []types.String{
 				types.StringUnknown(),
 				types.StringNull(),
 			},
@@ -96,5 +95,5 @@ func TestStringValidator_TmpfSize(t *testing.T) {
 		},
 	}
 
-	testValidatorExecute(t, tests)
+	testValidatorStringExecute(t, tests)
 }

@@ -45,6 +45,7 @@ jobs:
       - if: steps.cache.outputs.cache-hit != 'true'
         run: go mod download
       - run: go build -v .
+      - run: go test -v -cover ./...
 
   generate:
     runs-on: ubuntu-latest

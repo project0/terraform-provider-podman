@@ -9,8 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -39,12 +39,12 @@ func (p *podmanProvider) Metadata(_ context.Context, _ provider.MetadataRequest,
 	resp.TypeName = "podman"
 }
 
-// GetSchema defines the provider-level schema for configuration data.
-func (p *podmanProvider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+// Schema defines the provider-level schema for configuration data.
+func (p *podmanProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		MarkdownDescription: "The Podman provider provides resource management via the remote API.",
-		Attributes: map[string]tfsdk.Attribute{
-			"uri": {
+		Attributes: map[string]schema.Attribute{
+			"uri": schema.StringAttribute{
 				Description: "Connection URI to the podman service.",
 				MarkdownDescription: "Connection URI to the podman service. " +
 					"A valid URI connection should be of `scheme://`. " +
@@ -53,15 +53,13 @@ func (p *podmanProvider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 					"or `ssh://<user>@<host>[:port]/run/podman/podman.sock?secure=True`." +
 					"Defaults to `" + podmanDefaultURI + "`.",
 				Optional: true,
-				Type:     types.StringType,
 			},
-			"identity": {
+			"identity": schema.StringAttribute{
 				Description: "Local path to the identity file for SSH based connections.",
 				Optional:    true,
-				Type:        types.StringType,
 			},
 		},
-	}, nil
+	}
 }
 
 // Configure prepares a HashiCups API client for data sources and resources.
