@@ -50,7 +50,7 @@ type (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.ResourceWithSchema      = &networkResource{}
+	_ resource.Resource                = &networkResource{}
 	_ resource.ResourceWithConfigure   = &networkResource{}
 	_ resource.ResourceWithImportState = &networkResource{}
 )

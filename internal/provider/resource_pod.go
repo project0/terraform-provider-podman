@@ -36,7 +36,6 @@ type (
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &podResource{}
-	_ resource.ResourceWithSchema      = &podResource{}
 	_ resource.ResourceWithConfigure   = &podResource{}
 	_ resource.ResourceWithImportState = &podResource{}
 )
