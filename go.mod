@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/containers/common v0.51.0
-	github.com/containers/podman/v4 v4.4.0
+	github.com/containers/podman/v4 v4.4.1
 	github.com/hashicorp/terraform-plugin-docs v0.13.0
 	github.com/hashicorp/terraform-plugin-framework v1.1.1
 	github.com/hashicorp/terraform-plugin-framework-validators v0.9.0
